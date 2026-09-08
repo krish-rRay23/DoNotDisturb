@@ -1,0 +1,23 @@
+{
+  "archive_record_bytes": 75843507,
+  "canonical_id": "hopper-medium-replay-v2",
+  "created_at": "2026-09-06T06:19:09.300505+00:00",
+  "episodes_ok": true,
+  "filename": "hopper_medium_replay-v2.hdf5",
+  "local_bytes": 75854457,
+  "local_path": "data\\raw\\hopper_medium_replay-v2.hdf5",
+  "observed": {
+    "act_dim": 3,
+    "episodes": 2041,
+    "obs_dim": 11,
+    "transitions": 402000
+  },
+  "official_url": "http://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/hopper_medium_replay-v2.hdf5",
+  "retrieval_method": "wayback_snapshot_of_official_url",
+  "retrieval_url": "https://web.archive.org/web/20250102184654id_/https://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/hopper_medium_replay-v2.hdf5",
+  "schema_ok": true,
+  "sha256": "e121c5f7c9857a307baa9edc6a2c3b48e85fedb9ac316ecddd0f48ca7ef4e39b",
+  "validated_at": "2026-09-06T06:21:44.798025+00:00",
+  "validation_status": "validated",
+  "wayback_timestamp": "20250102184654"
+}

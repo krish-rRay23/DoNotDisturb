@@ -1,0 +1,23 @@
+{
+  "archive_record_bytes": 59433929,
+  "canonical_id": "halfcheetah-medium-replay-v2",
+  "created_at": "2026-09-06T06:17:38.138653+00:00",
+  "episodes_ok": true,
+  "filename": "halfcheetah_medium_replay-v2.hdf5",
+  "local_bytes": 59448533,
+  "local_path": "data\\raw\\halfcheetah_medium_replay-v2.hdf5",
+  "observed": {
+    "act_dim": 6,
+    "episodes": 202,
+    "obs_dim": 17,
+    "transitions": 202000
+  },
+  "official_url": "http://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/halfcheetah_medium_replay-v2.hdf5",
+  "retrieval_method": "wayback_snapshot_of_official_url",
+  "retrieval_url": "https://web.archive.org/web/20250102180132id_/https://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/halfcheetah_medium_replay-v2.hdf5",
+  "schema_ok": true,
+  "sha256": "48d494a4770c11f48260736dec090b78bdca8375647ed4d24bfa5b6610c7f683",
+  "validated_at": "2026-09-06T06:21:44.435451+00:00",
+  "validation_status": "validated",
+  "wayback_timestamp": "20250102180132"
+}

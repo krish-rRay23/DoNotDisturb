@@ -1,0 +1,23 @@
+{
+  "archive_record_bytes": 86314700,
+  "canonical_id": "walker2d-medium-replay-v2",
+  "created_at": "2026-09-06T06:20:42.498180+00:00",
+  "episodes_ok": true,
+  "filename": "walker2d_medium_replay-v2.hdf5",
+  "local_bytes": 86323963,
+  "local_path": "data\\raw\\walker2d_medium_replay-v2.hdf5",
+  "observed": {
+    "act_dim": 6,
+    "episodes": 1093,
+    "obs_dim": 17,
+    "transitions": 302000
+  },
+  "official_url": "http://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/walker2d_medium_replay-v2.hdf5",
+  "retrieval_method": "wayback_snapshot_of_official_url",
+  "retrieval_url": "https://web.archive.org/web/20250102174320id_/https://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/walker2d_medium_replay-v2.hdf5",
+  "schema_ok": true,
+  "sha256": "e75de96a4f77acf7d4e0d6fdf0d7ccb177c26c44bb4388e4fd99f543ccfa18db",
+  "validated_at": "2026-09-06T06:21:45.256031+00:00",
+  "validation_status": "validated",
+  "wayback_timestamp": "20250102174320"
+}
