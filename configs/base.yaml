@@ -1,0 +1,27 @@
+# M1 foundation configuration. Algorithm and benchmark choices remain open.
+seed: 42
+device: auto
+deterministic: false
+
+environment:
+  name: null
+  kwargs: {}
+
+dataset:
+  name: null
+  path: null
+
+algorithm:
+  name: null
+  parameters: {}
+
+training:
+  steps: null
+  evaluation_frequency: null
+  checkpoint_frequency: null
+
+logging:
+  level: INFO
+  root_dir: logs
+  save_metadata: true
+

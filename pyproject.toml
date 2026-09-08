@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adaptive-plasticity-rl"
+version = "0.1.0"
+description = "Reproducibility infrastructure for adaptive plasticity offline-to-online RL research."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Adaptive Plasticity RL contributors" }]
+dependencies = [
+    "gymnasium[mujoco]>=1.0",
+    "h5py>=3.8",
+    "huggingface_hub>=0.20",
+    "minari>=0.5",
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "PyYAML>=6.0",
+    "requests>=2.31",
+    "scipy>=1.11",
+    "torch==2.14.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+adaptive-plasticity = "adaptive_plasticity.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

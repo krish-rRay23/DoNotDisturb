@@ -1,0 +1,35 @@
+# Python environments and generated Python files
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Packaging and IDE files
+build/
+dist/
+*.egg-info/
+.vscode/
+.idea/
+
+# Generated experiment artifacts (directories retained via .gitkeep)
+results/*
+!results/.gitkeep
+logs/*
+!logs/.gitkeep
+checkpoints/*
+!checkpoints/.gitkeep
+plots/*
+!plots/.gitkeep
+
+# M3 offline datasets: raw data is immutable and never committed.
+# Provenance manifests under data/manifests/ ARE tracked.
+data/raw/
+*.hdf5
+
+# Local configuration and secrets
+.env
+*.local.yaml
+

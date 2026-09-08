@@ -1,0 +1,42 @@
+# M4 standard IQL baseline configuration (Kostrikov et al., 2021 values).
+# Dataset, seed, steps, and device are overridden from the command line.
+seed: 0
+device: auto
+deterministic: false
+
+dataset:
+  id: halfcheetah-medium-v2
+
+algorithm:
+  name: iql
+  parameters:
+    hidden_dim: 256
+    hidden_layers: 2
+    expectile: 0.7
+    temperature: 3.0
+    discount: 0.99
+    target_tau: 0.005
+    max_advantage: 100.0
+    actor_lr: 0.0003
+    critic_lr: 0.0003
+    batch_size: 256
+
+# No normalization is applied. These flags exist only to make that explicit;
+# enabling either raises an error (not implemented by design).
+normalization:
+  observations: false
+  rewards: false
+
+training:
+  # 200k gradient steps: all hyperparameter VALUES are standard IQL; the step
+  # budget is reduced from CORL's 1M for the RTX 3050 laptop GPU and is
+  # reported transparently in every run summary.
+  steps: 200000
+  eval_interval: 25000
+  eval_episodes: 10
+  checkpoint_interval: 50000
+
+logging:
+  level: INFO
+  root_dir: logs
+  save_metadata: true
