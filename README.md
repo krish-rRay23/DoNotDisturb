@@ -1,260 +1,502 @@
 # Adaptive Plasticity Control for Offline-to-Online Reinforcement Learning
 
-This project implements a research-grade pipeline for studying adaptive plasticity regulation during offline-to-online reinforcement learning, from infrastructure (M1) through adaptive plasticity control (M10).
+<p align="center">
+  <strong>Can an RL agent learn when to preserve plasticity and when to restore it?</strong>
+</p>
 
-## Project Status: M10 Complete ✅
-
-All milestones M1–M10 implemented and tested. The adaptive plasticity controller (M10) is fully implemented with 13 unit tests passing and micro-validation confirmed.
-
-## Milestone Summary
-
-| Milestone | Status | Description |
-|-----------|--------|-------------|
-| **M1** | ✅ | Core infrastructure: config, logging, reproducibility, CLI |
-| **M2** | ✅ | Environment validation (MuJoCo/Gymnasium) |
-| **M3** | ✅ | Dataset pipeline (D4RL/Minari, HDF5, provenance) |
-| **M4** | ✅ | Standard IQL baseline (Kostrikov et al., 2021) |
-| **M5** | ✅ | Offline→Online transition pipeline |
-| **M6** | ✅ | Plasticity diagnostics (repr_change, perf_change, dormancy) |
-| **M7** | ✅ | ReDo plasticity-preservation regularizer |
-| **M8** | ✅ | Distribution shifts (obs_noise, reward_scale) |
-| **M9** | ✅ | Fixed/Random/Adaptive intervention controls |
-| **M10** | ✅ **Adaptive Plasticity Controller** - **COMPLETE** |
+<p align="center">
+  A research-oriented study of adaptive plasticity control under distribution shift.
+</p>
 
 ---
 
-## M10: Adaptive Plasticity Controller
+## Overview
 
-The M10 milestone implements a rule-based adaptive plasticity controller that dynamically adjusts intervention strength based on online plasticity diagnostics.
+Offline-to-online reinforcement learning combines **offline pretraining** with continued interaction in a changing environment.
 
-### Controller Equation
+A central challenge is **plasticity**: the ability of a neural network to continue learning from new data without destroying useful representations acquired previously.
 
-```python
-raw = 0.4 * repr_change - 0.4 * perf_change - 0.2 * activation_dormancy
-strength = clip(raw, min_severity=0.0, max_severity=1.0)
+Most plasticity-preserving approaches apply a **fixed intervention** throughout training.
+
+This project investigates a different question:
+
+> **Should the amount of plasticity intervention remain fixed when the learning regime itself is changing?**
+
+We study an **Adaptive Plasticity Controller** that adjusts intervention strength using signals from the agent's learning dynamics.
+
+The goal is to determine whether **adaptive control of plasticity** can provide a better trade-off between:
+
+- retaining useful prior representations,
+- adapting to new distributions,
+- maintaining performance under distribution shift.
+
+---
+
+## Research Question
+
+### Main question
+
+> **Can an RL agent dynamically regulate its plasticity according to the degree of distribution shift, instead of relying on a fixed plasticity-preserving intervention?**
+
+### Hypothesis
+
+A fixed intervention may be unnecessarily restrictive during periods where rapid adaptation is required and insufficient when prior representations become unstable.
+
+We therefore hypothesize:
+
+> **An adaptive controller can preserve prior knowledge when stability matters and restore plasticity when adaptation is required.**
+
+This project treats plasticity intervention as a **meta-control problem over learning dynamics**.
+
+---
+
+## Method
+
+```text
+Offline Dataset
+      │
+      ▼
+   IQL Agent
+      │
+      ▼
+Offline → Online Transition
+      │
+      ▼
+   Online RL
+      │
+      ├───────────────┐
+      │               │
+      ▼               ▼
+   Fixed          Adaptive
+Intervention      Controller
+      │               │
+      └───────┬───────┘
+              ▼
+       Distribution Shift
+              │
+              ▼
+        RL Performance
 ```
 
-### Controller Inputs (Real-time Diagnostics)
+### Adaptive Controller
 
-| Diagnostic | Definition | Range | Interpretation |
-|------------|------------|-------|----------------|
-| `repr_change` | `1 - cos_sim(θ_t, θ_{t-Δt})` per module, averaged | [0, 1] | 0 = identical, 1 = orthogonal |
-| `perf_change` | `normalized_return_t - normalized_return_{t-Δt}` | ℝ | < 0 = degradation |
-| `activation_dormancy` | `frac(\|w\| < 1e-4)` for policy params | [0, 1] | 1 = all dormant |
-| `param_magnitude` | `mean(||w||_2)` over trainable params | ℝ⁺ | Logged only |
+The controller uses three diagnostics:
 
-### Controller Logic
+- **Representation change**
+- **Performance change**
+- **Activation dormancy**
 
-- **Representation instability ↑** → intervention strength **↑**
-- **Performance degradation** (perf_change < 0) → intervention strength **↑**
-- **Dormancy ↑** → intervention strength **↓**
-- Strength clipped to `[min_severity, max_severity]` ⊆ `[0, 1]`
+The current rule-based controller computes:
 
-### Key Features
+```text
+raw =
+    0.4 × representation_change
+  − 0.4 × performance_change
+  − 0.2 × activation_dormancy
 
-1. **Temporal representation change** — Compares current agent params vs. frozen snapshot from previous controller update
-2. **Real performance delta** — `perf_change = current_norm - prev_norm` (0.0 for first eval)
-3. **Single diagnostic record per controller update** — No duplicate records
-4. **Persistent logging** — `diagnostics.jsonl` with all controller state
-5. **Deterministic** — Seeded RNG, CUDA determinism configured
-6. **Shift-aware** — Respects `shift_step` for intervention activation
+strength = clip(raw, min_severity, max_severity)
+```
+
+The resulting intervention strength is applied dynamically during online learning.
+
+---
+
+## Experimental Setup
+
+### Environments
+
+- HalfCheetah-v5
+- Hopper-v5
+- Walker2d-v5
+
+### Offline data
+
+D4RL-style datasets:
+
+- `medium`
+- `medium-replay`
+
+for the three environments.
+
+### Offline algorithm
+
+**Implicit Q-Learning (IQL)** is used for offline pretraining.
+
+### Baselines
+
+The M10 study compares:
+
+```text
+Fixed Intervention
+        vs
+Adaptive Intervention
+```
+
+under:
+
+```text
+No Distribution Shift
+        vs
+Distribution Shift
+```
+
+with three random seeds per condition.
+
+---
+
+## Distribution Shifts
+
+Controlled shifts can be introduced during the online phase.
+
+### Observation Noise
+
+```text
+obs' = obs + N(0, severity²)
+```
+
+### Reward Scaling
+
+Rewards can also be modified through controlled scaling.
+
+The shift mechanism is deterministic with respect to the experiment seed and activates only after the configured shift step.
+
+---
+
+## Experimental Progress
+
+The project is organized into twelve research milestones.
+
+| Milestone | Description | Status |
+|---|---|---|
+| **M1** | Reproducible research repository | ✅ |
+| **M2** | Environment and dataset validation | ✅ |
+| **M3** | Dataset pipeline | ✅ |
+| **M4** | IQL offline baseline | ✅ |
+| **M5** | Offline → online RL pipeline | ✅ |
+| **M6** | Plasticity diagnostics | ✅ |
+| **M7** | ReDo-inspired baseline | ✅ |
+| **M8** | Controlled distribution shifts | ✅ |
+| **M9** | Fixed/random intervention controls | ✅ |
+| **M10** | Adaptive Plasticity Controller | ✅ |
+| **M11** | Learned controller | Conditional |
+| **M12** | Final study, analysis and paper artifacts | Pending |
+
+**M11 is intentionally conditional.** A learned controller will only be implemented if the M10 evidence provides a strong enough scientific basis.
+
+---
+
+## Current M10 Experiment
+
+The completed M10 study consists of:
+
+```text
+3 environments
+× 2 conditions
+× 2 controller types
+× 3 seeds
+= 36 runs
+```
+
+Controller types:
+
+```text
+Adaptive
+Fixed
+```
+
+Conditions:
+
+```text
+Shift
+No-shift
+```
+
+Each run uses the same training budget and evaluation protocol so that the comparison isolates the effect of the intervention strategy.
+
+---
+
+## Results
+
+The current M10 study is analyzed across:
+
+### Primary metric
+
+**Final normalized return**
+
+### Secondary metrics
+
+- Best normalized return
+- Learning-curve AUC
+- Shift-induced performance degradation
+- Controller intervention strength
+- Representation dynamics
+- Performance change
+- Activation dormancy
+
+Results are reported across individual seeds rather than relying only on aggregate averages.
+
+> **Important:** The project does not assume that Adaptive will outperform Fixed in every environment. The scientific objective is to determine where adaptive control helps, where it fails, and why.
+
+Detailed experiment outputs live under:
+
+```text
+results/
+```
+
+Final analysis is stored under:
+
+```text
+results/M10_analysis/
+```
+
+---
+
+## Repository Structure
+
+```text
+adaptive-plasticity-control/
+│
+├── configs/
+│   └── Experiment configuration files
+│
+├── src/
+│   └── adaptive_plasticity/
+│       ├── algorithms/
+│       ├── datasets/
+│       ├── environments/
+│       ├── diagnostics/
+│       ├── interventions/
+│       └── experiments/
+│
+├── tests/
+│   └── Unit and integration tests
+│
+├── scripts/
+│   └── Training, evaluation and analysis utilities
+│
+├── experiments/
+│   └── Experiment definitions and launch configurations
+│
+├── results/
+│   ├── M10_analysis/
+│   └── experiment outputs
+│
+├── checkpoints/
+│   └── Model checkpoints
+│
+├── plots/
+│   └── Generated visualizations
+│
+├── logs/
+│   └── Training and diagnostic logs
+│
+├── docs/
+│   └── Research notes and documentation
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+├── pyproject.toml
+├── LICENSE
+└── README.md
+```
+
+---
+
+## Reproducibility
+
+The project is designed around deterministic and auditable experiments.
+
+Each experiment records:
+
+```text
+environment
+dataset
+seed
+algorithm configuration
+shift configuration
+controller configuration
+training budget
+evaluation configuration
+software/runtime metadata
+```
+
+Raw datasets are kept separate from processed experiment artifacts.
+
+Experiment outputs are stored independently for each seed and condition to avoid accidental aggregation or overwriting.
+
+---
+
+## Installation
+
+Python **3.11+** is recommended.
+
+```bash
+git clone https://github.com/<username>/adaptive-plasticity-control.git
+cd adaptive-plasticity-control
+
+python -m venv .venv
+```
+
+### Windows
+
+```powershell
+.venv\Scripts\activate
+```
+
+### Linux / macOS
+
+```bash
+source .venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -e .
+```
 
 ---
 
 ## Quick Start
 
-### Installation
+Run the experiment launcher:
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+```bash
+python -m adaptive_plasticity
 ```
 
-For CUDA: install PyTorch from [pytorch.org](https://pytorch.org/get-started/locally/) first.
+Specific experiments are configured through:
 
-### Run Tests
-
-```powershell
-python -m pytest                    # All 89 tests (88 pass, 1 expected M9 legacy failure)
-python -m pytest tests/test_m10.py -v   # M10 tests only
+```text
+configs/
 ```
 
-### Run M10 Micro-Validation (4 conditions × 100 steps)
-
-```powershell
-python run_micro_validation.py
-```
-
-Expected output: All 4 conditions pass with online_steps=100, update_steps>0, no NaN/Inf, diagnostics.jsonl created.
-
-### Run Single M10 Experiment
-
-```powershell
-python -m adaptive_plasticity.m5 ^
-  --dataset halfcheetah-medium-v2 ^
-  --seed 0 ^
-  --online-steps 20000 ^
-  --update-freq 1000 ^
-  --online-ratio 0.5 ^
-  --warmup-steps 50000 ^
-  --eval-interval 5000 ^
-  --eval-episodes 5 ^
-  --device cuda ^
-  --controller-type adaptive ^
-  --shift-type obs_noise ^
-  --shift-step 5000 ^
-  --severity 0.1
-```
-
-### Controller Types
-
-| Type | `--controller-type` | Behavior |
-|------|---------------------|----------|
-| `none` | `none` | No intervention (baseline) |
-| `fixed` | `fixed` | Constant severity after `shift_step` |
-| `adaptive` | `adaptive` | M10 adaptive controller (dynamic severity) |
-
-### Distribution Shifts
-
-| Shift Type | `--shift-type` | Effect |
-|------------|----------------|--------|
-| Observation noise | `obs_noise` | Adds bounded Gaussian noise to observations |
-| Reward scaling | `reward_scale` | Scales rewards by severity factor |
-
-Shift activates at `--shift-step` (0 = never).
+Training outputs, checkpoints, logs and evaluation results are written to the configured experiment directories.
 
 ---
 
-## Project Structure
+## Testing
 
+Run:
+
+```bash
+pytest
 ```
-adaptive-plasticity-rl/
-├── src/adaptive_plasticity/          # Core package
-│   ├── m5.py              # M5 pipeline + M10 controller integration
-│   ├── m6.py              # Plasticity diagnostics
-│   ├── m7.py              # ReDo regularizer
-│   ├── m8.py              # Distribution shifts
-│   └── iql.py             # IQL agent (M4)
-├── configs/                # YAML configurations
-├── tests/                  # 89 unit/integration tests
-├── data/                   # Dataset manifests (raw data in data/raw/)
-├── docs/                   # Per-milestone documentation
-├── results/                # Experiment outputs (gitignored)
-├── logs/                   # JSONL logs
-├── plots/                  # Generated plots
-├── checkpoints/            # Model checkpoints
-├── data/raw/               # Raw D4RL datasets (gitignored)
-├── data/manifests/         # Dataset provenance manifests
-├── tests/                  # 89 tests (88 pass, 1 expected M9 legacy failure)
-├── run_micro_validation.py # Quick 4-condition validation
-├── run_pilot.py            # Pilot experiment runner
-├── run_micro_validation.py # Micro-validation runner
-├── launch_seed1.ps1        # PowerShell launcher
-└── pyproject.toml          # Package metadata
+
+The test suite covers core components including:
+
+- dataset loading
+- deterministic sampling
+- IQL updates
+- offline-to-online transitions
+- intervention behavior
+- distribution shifts
+- plasticity diagnostics
+- adaptive controller logic
+- experiment reproducibility
+
+---
+
+## Research Philosophy
+
+This repository is intended as a **research artifact**, not simply an RL implementation.
+
+### 1. Controlled comparisons
+
+Adaptive and fixed interventions are evaluated under the same environments, seeds, training budgets and shift configurations.
+
+### 2. Mechanistic analysis
+
+Performance alone is not sufficient.
+
+The project also examines **why** the controller behaves differently by tracking representation dynamics, performance changes and neuron activity.
+
+### 3. Negative results matter
+
+A controller is not considered successful merely because one benchmark improves.
+
+The final conclusion is based on:
+
+```text
+performance
++
+consistency across seeds
++
+robustness under shift
++
+controller behavior
++
+ablation evidence
 ```
 
 ---
 
-## Running the 12-Run M10 Validation Batch
+## Research Roadmap
 
-```powershell
-# 4 conditions × 3 seeds = 12 runs
-# Each run: ~5-7 min on RTX 3050
-
-# Fixed + obs_noise shift (seeds 0,1,2)
-python -m adaptive_plasticity.m5 --dataset halfcheetah-medium-v2 --seed 0 --controller-type fixed --shift-type obs_noise --shift-step 5000 --severity 0.1 --online-steps 20000 --warmup-steps 50000 --eval-interval 5000 --eval-episodes 5 --device cuda
-
-python -m adaptive_plasticity.m5 --dataset halfcheetah-medium-v2 --seed 1 --controller-type fixed --shift-type obs_noise --shift-step 5000 --severity 0.1 ...
-
-python -m adaptive_plasticity.m5 --dataset halfcheetah-medium-v2 --seed 2 --controller-type fixed --shift-type obs_noise --shift-step 5000 --severity 0.1 ...
-
-# Adaptive + obs_noise shift (seeds 0,1,2)
-python -m adaptive_plasticity.m5 --dataset halfcheetah-medium-v2 --seed 0 --controller-type adaptive --shift-type obs_noise --shift-step 5000 --severity 0.1 ...
-
-# Fixed + no shift (seeds 0,1,2)
-python -m adaptive_plasticity.m5 --dataset halfcheetah-medium-v2 --seed 0 --controller-type fixed --shift-type obs_noise --shift-step 0 --severity 0.1 ...
-
-# Adaptive + no shift (seeds 0,1,2)
-python -m adaptive_plasticity.m5 --dataset halfcheetah-medium-v2 --seed 0 --controller-type adaptive --shift-type obs_noise --shift-step 0 --severity 0.1 ...
+```text
+M1  ── Reproducibility
+M2  ── Environment / Dataset Validation
+M3  ── Dataset Pipeline
+M4  ── IQL Baseline
+M5  ── Offline → Online RL
+M6  ── Plasticity Diagnostics
+M7  ── ReDo Baseline
+M8  ── Distribution Shifts
+M9  ── Fixed / Random Controls
+M10 ── Adaptive Plasticity Controller
+       │
+       ├──► Analyze evidence
+       │
+       └──► M11 Learned Controller
+                │
+                ▼
+              M12
+       Final Study + Paper
 ```
-
-### Expected Outputs per Run
-
-```
-results/
-├── M10-fixed-shift-seed0/
-│   ├── summary.json          # Aggregated metrics
-│   └── ...
-├── diagnostics_M10-adaptive-shift-seed0.jsonl   # Per-step diagnostics
-└── ...
-```
-
-Each run produces:
-- `summary.json` — Best/last returns, normalized scores, update counts
-- `diagnostics_M10-{controller}-{shift|noshift}-seed{N}.jsonl` — Per-step diagnostics
 
 ---
 
-## Running Tests
+## Why This Project?
 
-```powershell
-python -m pytest                          # All 89 tests
-python -m pytest tests/test_m10.py -v    # M10 tests (13 tests)
-python -m pytest tests/test_m5.py -v     # M5 integration tests
-python -m pytest tests/test_m6.py -v     # Diagnostics tests
-```
+The underlying idea is simple:
 
-**Expected:** 88/89 tests pass (1 expected M9 legacy failure in `AdaptiveIntervention` — unrelated to M10)
+> **Learning dynamics are not stationary, so plasticity control should not necessarily be stationary either.**
 
----
+Instead of asking only:
 
-## Scientific Rigor Checklist
+> "How do we preserve plasticity?"
 
-- [x] Temporal representation change (current vs previous controller step)
-- [x] Real performance delta (`perf_change = current_norm - prev_norm`)
-- ✅ Single diagnostic record per controller update
-- ✅ `perf_change = current_norm - prev_norm` (0.0 for first eval)
-- ✅ Controller equation: `0.4*repr - 0.4*perf - 0.2*dormancy`, clipped [0,1]
-- ✅ Directionality verified: repr↑→strength↑, perf↓→strength↑, dormancy↑→strength↓
-- ✅ Bounds enforced: `strength ∈ [0, 1]`
-- ✅ NaN/Inf guarded
-- ✅ Deterministic under fixed seed (CUDA determinism enabled)
-- ✅ Shift activates exactly at `shift_step`
-- ✅ No-shift: `shift_active=False` throughout
-- ✅ Diagnostics logged to `diagnostics.jsonl` per run
-- ✅ Unique output paths: `M10-{controller}-{shift|noshift}-seed{N}/`
+this project asks:
 
----
+> **"Can an agent decide how much plasticity it needs right now?"**
 
-## Known Limitations
-
-| Limitation | Status |
-|------------|--------|
-| Checkpoint/resume for M10 | Placeholder only — not implemented |
-| CUDA determinism | `warn_only=True` — some ops may be non-deterministic |
-| `perf_change` in micro-val | 0.0 until ≥2 evaluations occur |
-| Value head `repr_change` | Returns 0.0 when norms are zero (handled) |
-| Checkpoint/resume | Not implemented for M10 state |
+That shifts plasticity preservation from a static regularization problem toward a **dynamic control problem over the learning process itself**.
 
 ---
 
 ## Citation
 
-If you use this codebase in research, please cite the relevant milestones and the original IQL paper:
+A formal citation will be added with the final research report.
 
 ```bibtex
-@article{kostrikov2021offline,
-  title={Offline Reinforcement Learning with Implicit Q-Learning},
-  author={Kostrikov, Ilya and Nair, Ashvin and Levine, Sergey},
-  journal={ICLR},
-  year={2022}
+@software{ray_adaptive_plasticity_control,
+  author  = {Krish Ray},
+  title   = {Adaptive Plasticity Control for Offline-to-Online Reinforcement Learning},
+  year    = {2026},
+  url     = {https://github.com/<username>/adaptive-plasticity-control}
 }
 ```
 
 ---
 
-## License
+## Status
 
-MIT License — see [LICENSE](LICENSE) for details.
+**Research prototype — M10 experimental study complete.**
+
+The next stage is rigorous analysis of the 36-run study, followed by a decision on whether a learned controller is scientifically justified.
+
+```text
+Build → Measure → Analyze → Validate → Publish
+```
