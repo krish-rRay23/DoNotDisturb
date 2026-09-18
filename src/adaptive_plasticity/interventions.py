@@ -6,7 +6,7 @@ Grounds all interventions in peer-reviewed literature:
    where sigma_init = sqrt(2 / fan_in) (Kaiming standard deviation for ReLU).
    Adam first and second moment buffers (exp_avg, exp_avg_sq) are reset for
    perturbed parameters.
-2. Dormant Neuron Recycling / ReDo (Sokar et al., NeurIPS 2023):
+2. Dormant Neuron Recycling / ReDo (Sokar et al., ICML 2023):
    Identifies dormant units whose normalized activation score over a probe
    batch satisfies:
        s_i = mean_n(|h_{n,i}|) / [ (1/H) sum_j mean_n(|h_{n,j}|) ] < tau

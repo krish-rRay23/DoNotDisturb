@@ -1,4 +1,21 @@
-"""Generate tight 1-page-compressed ICLR 2027 paper manuscript.
+"""Update scratch/generate_final_manuscript.py to incorporate all ICLR Paper Assistant feedback points:
+
+1. Correct all bibliography author lists, titles, and venues (done in .bib).
+2. Fix the 150-run wording to clearly distinguish 135 primary + 15 reference runs, with N=45 matched evaluations.
+3. Reconcile Table 1 with Appendix A.2 and correct all SD/min/max discrepancies.
+4. Explicitly state which networks CAPACITYGATE intervenes on and how optimizer moments are reset.
+5. Specify actuator joints: HalfCheetah joint 0, Walker2d joint 2.
+6. Clarify the final-step intervention skip in the controller/telemetry description.
+7. Fix the stale ReDo venue in code/docstrings (done in interventions.py).
+8. Correct the ReLU dormancy definition/notation where needed.
+"""
+
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+GEN_SCRIPT = REPO_ROOT / "scratch" / "generate_final_manuscript.py"
+
+content = r'''"""Generate tight 1-page-compressed ICLR 2027 paper manuscript.
 Strictly fits <= 9 pages before bibliography with all feedback incorporated.
 """
 
@@ -545,3 +562,7 @@ Table~\ref{tab:telemetry_audit} documents the complete step-by-step diagnostic t
 
 OUT_FILE.write_text(MANUSCRIPT_CONTENT, encoding="utf-8")
 print("Successfully generated updated ICLR 2027 manuscript with all Paper Assistant fixes!")
+'''
+
+GEN_SCRIPT.write_text(content, encoding="utf-8")
+print("Successfully wrote updated scratch/generate_final_manuscript.py!")
