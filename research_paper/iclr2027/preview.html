@@ -109,22 +109,10 @@
   <div class="fig-caption">Figure 2: Online adaptation learning curves across 25,000 steps for all benchmark cells. Fixed periodic Shrink-and-Perturb induces immediate and permanent policy collapse in balance-critical locomotion tasks (Hopper and Walker2d).</div>
 </div>
 
-<h2>4. Diagnostic Trajectories and Performance Retention</h2>
-<div style="display: flex; gap: 20px;">
-  <div class="fig-box" style="flex: 1;">
-    <img src="figures/capacity_trajectories.png" alt="Capacity Trajectories">
-    <div class="fig-caption">Figure 3a: Representation diagnostics (effective rank ratio &rho; and dormant fraction d) monitored during online adaptation, remaining within healthy bounds (&rho; &gt; 0.70, d &lt; 0.15).</div>
-  </div>
-  <div class="fig-box" style="flex: 1;">
-    <img src="figures/clean_vs_shifted.png" alt="Clean vs Shifted">
-    <div class="fig-caption">Figure 3b: Performance retention across clean, observation noise, and reward scaling regimes.</div>
-  </div>
-</div>
-
-<h2>5. Operator Stability Asymmetry Under Non-Stationary Physical Stress</h2>
+<h2>4. Operator Stability Asymmetry Under Non-Stationary Physical Stress</h2>
 <div class="fig-box">
   <img src="figures/stress_operator_asymmetry.png" alt="Operator Stability Asymmetry">
-  <div class="fig-caption">Figure 4: Operator stability asymmetry under severe actuator crippling at step 5,000. On balance-critical Walker2d, weight-space perturbation (Fixed) collapses bipedal locomotion (-0.53 &plusmn; 0.33), whereas zero-functional-shift ReDo preserves balance (8.03 &plusmn; 1.57). In unconstrained HalfCheetah, breaking the offline prior promotes alternate galloping gaits (Fixed 15.26, ReDo 13.64 vs Baseline 6.23).</div>
+  <div class="fig-caption">Figure 3 (Main Text Figure 4): Operator stability asymmetry under severe actuator crippling at step 5,000. On balance-critical Walker2d, weight-space perturbation (Fixed) collapses bipedal locomotion (-0.53 &plusmn; 0.33), whereas zero-functional-shift ReDo preserves balance (8.03 &plusmn; 1.57). In unconstrained HalfCheetah, breaking the offline prior promotes alternate galloping gaits (Fixed 15.26, ReDo 13.64 vs Baseline 6.23).</div>
 </div>
 
 <table>
@@ -143,6 +131,23 @@
   </tbody>
 </table>
 
+<h2>5. Supplementary Diagnostics (Appendix Material)</h2>
+<p>To preserve a concise &le; 9-page main text, full continuous diagnostic trajectories and the 15-step causal telemetry trace are placed in the Appendix:</p>
+<div style="display: flex; gap: 20px;">
+  <div class="fig-box" style="flex: 1;">
+    <img src="figures/capacity_trajectories.png" alt="Capacity Trajectories">
+    <div class="fig-caption">Appendix Figure A.1a: Online trajectories of relative effective rank (&rho;) and activation dormancy (d), showing &rho; &gt; 0.70 and d &lt; 0.085 throughout stable transfer.</div>
+  </div>
+  <div class="fig-box" style="flex: 1;">
+    <img src="figures/clean_vs_shifted.png" alt="Clean vs Shifted">
+    <div class="fig-caption">Appendix Figure A.1b: Performance retention across clean, observation noise, and reward scaling regimes.</div>
+  </div>
+</div>
+
+<div class="alert-box">
+  <strong>Causal Telemetry Trigger Summary (Section 5.4 &amp; Appendix Table A.4):</strong> Under joint crippling at step 5k, relative rank decays below trigger threshold at step 7k (&rho; = 0.6948 &le; 0.70), actuating parameter intervention (||&Delta;&theta;|| = 2.954). 3k-step refractory cooldown spaces actuations, achieving final score 8.58 vs 7.99 unperturbed.
+</div>
+
 <div class="future-box">
   <div style="font-weight: bold; color: #166534; font-size: 11pt;">Conclusion &amp; Future Work (Section 8)</div>
   <p style="margin: 6px 0 10px 0; color: #14532d;">Plasticity interventions in offline-to-online RL should not be treated as indiscriminate background routines, but rather as regime- and operator-dependent operations governed by capacity telemetry. Four key future avenues are detailed in the manuscript:</p>
@@ -155,8 +160,14 @@
 </div>
 
 <div class="alert-box">
-  <strong>Appendix Demarcation Note:</strong> All supplementary tables are explicitly numbered as <strong>Table A.1</strong> (Complete 135-Run Primary Benchmark Breakdown across Seeds 0&ndash;4) and <strong>Table A.2</strong> (Experimental Hyperparameters and Diagnostic Settings), located in the Appendix after the references.
+  <strong>Appendix Overview:</strong><br>
+  • <strong>Table A.1:</strong> Extended Literature Comparison &amp; Conceptual Positioning Matrix<br>
+  • <strong>Table A.2:</strong> Complete 135-Run Primary Benchmark Breakdown (Seeds 0&ndash;4)<br>
+  • <strong>Table A.3:</strong> Experimental Hyperparameters and Diagnostic Settings<br>
+  • <strong>Figure A.1:</strong> Diagnostic Telemetry Trajectories and Cross-Regime Retention<br>
+  • <strong>Table A.4:</strong> Step-by-Step Diagnostic Telemetry Trace Under Actuator Stress
 </div>
+
 
 </div>
 </body>
