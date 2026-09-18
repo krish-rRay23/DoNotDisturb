@@ -1,7 +1,7 @@
 {
   "archive_record_bytes": 152717255,
   "canonical_id": "hopper-medium-v2",
-  "created_at": "2026-09-06T06:07:04.725008+00:00",
+  "created_at": "2026-09-10T02:14:13.733568+00:00",
   "episodes_ok": true,
   "filename": "hopper_medium-v2.hdf5",
   "local_bytes": 152756557,
@@ -17,7 +17,7 @@
   "retrieval_url": "https://web.archive.org/web/20250102180047id_/https://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/hopper_medium-v2.hdf5",
   "schema_ok": true,
   "sha256": "5bdf1bc4a713c82941de44633df669b36c89850b652a25985166796d25cf71a0",
-  "validated_at": "2026-09-06T06:21:42.921920+00:00",
+  "validated_at": "2026-09-10T02:15:57.193444+00:00",
   "validation_status": "validated",
   "wayback_timestamp": "20250102180047"
 }

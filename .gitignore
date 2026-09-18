@@ -33,3 +33,5 @@ data/raw/
 .env
 *.local.yaml
 
+# Legacy test result folder
+RESULT_OLD/

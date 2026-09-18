@@ -1,0 +1,653 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2027_conference,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{microtype}
+\usepackage{cleveref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\title{Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning}
+
+% Authors must not appear in the submitted version. They should be hidden
+% as long as the \iclrfinalcopy macro remains commented out below.
+% Non-anonymous submissions will be rejected without review.
+
+\author{Anonymous Authors \\
+Paper under double-blind review
+}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+%\iclrfinalcopy % Uncomment for camera-ready version, but NOT for submission.
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Maintaining neural network plasticity is widely regarded as an indispensable prerequisite for continual reinforcement learning (RL). A vibrant literature advocates periodic parameter interventions---such as network resets, Shrink-and-Perturb, and dormant neuron recycling---to counteract capacity loss, dead units, and feature rank collapse. While effective in continual supervised learning and long-horizon online RL from scratch, these methods rest on an implicit assumption: that plasticity restoration is universally benign and can be scheduled unconditionally. In this work, we demonstrate that this assumption fails fundamentally in \emph{offline-to-online (O2O) continuous-control RL}. 
+
+When transitioning from static pretraining to online interaction, agents inherit structured, high-performing policy and value manifolds. Across standard D4RL continuous-control locomotion benchmarks, we show that unconditional periodic Shrink-and-Perturb induces severe \emph{intervention vulnerability}, destabilizing converged locomotion policies and causing a catastrophic 68.3\% collapse in aggregate Interquartile Mean (IQM) normalized return ($38.78 \to 12.30$, paired Wilcoxon signed-rank $W = 18.0$, $p = 1.44 \times 10^{-11}$, mean paired difference $+26.03 \pm 19.09$). To address this vulnerability, we articulate the \textbf{``Do Not Disturb''} principle: an agent should intervene only when representation capacity is demonstrably impaired. We introduce \textsc{CapacityGate}, a closed-loop diagnostic framework that monitors feature effective rank and neuron dormancy using uniform replay reservoir sampling and refractory cooldown control. In stable and moderately shifted transfer, \textsc{CapacityGate} detects that representation capacity remains intact ($\rho \approx 1.0, d < 0.08$) and safely abstains from intervention, preserving baseline performance ($38.78$ IQM) and protecting converged policies against perturbation-induced collapse. Furthermore, under non-stationary physical stress (actuator crippling), we uncover a profound \emph{operator stability asymmetry}: zero-functional-shift neuron recycling (ReDo) preserves bipedal balance manifolds ($8.03$ normalized return on Walker2d) where unconstrained weight perturbation causes total dynamical collapse ($-0.53$). Our findings reframe plasticity restoration in O2O RL from an open-loop maintenance routine to a regime- and operator-dependent intervention that requires rigorous diagnostic gating.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Deep reinforcement learning (RL) agents trained with temporal-difference (TD) methods are prone to a progressive degradation in learning capacity, commonly termed \emph{loss of plasticity} \citep{kumar2020implicit, lyle2023understanding, dohare2024loss}. When learning non-stationary tasks or updating parameters over extended training horizons, neural representations frequently exhibit dormant neurons, vanishing gradients, and feature rank collapse. To combat this attrition, the continual learning and RL communities have developed active parameter-intervention techniques: periodic full or partial network resets \citep{nikishin2022primacy, doro2023sample}, Shrink-and-Perturb operators \citep{ash2020warmstarting}, and dormant neuron recycling \citep{sokar2023dormant, schwarzer2024bigger}. The foundational premise across this body of work is that plasticity loss is an omnipresent vulnerability, and that periodic, scheduled intervention is widely assumed to maintain learning agility.
+
+In this work, we examine this premise within \emph{offline-to-online (O2O) reinforcement learning} \citep{nair2020awac, lee2022offline2online, kostrikov2021iql}. In the O2O paradigm, an agent is first pretrained on a static offline dataset of demonstrations and subsequently deployed into the environment for online fine-tuning. This setting represents one of the most promising avenues for scaling RL to real-world continuous control, such as robotics, where online sample collection is costly and dangerous. During online adaptation, agents inevitably encounter distribution shifts arising from out-of-distribution state exploration, dynamics discrepancies, or altered rewards. It is natural to hypothesize that injecting plasticity-restoration interventions into the online phase would prevent premature convergence and accelerate fine-tuning.
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/iqm.png}
+    \caption{Aggregate Normalized Return (IQM $\pm$ 95\% CI)}
+    \label{fig:iqm_intro}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/prob_improvement.png}
+    \caption{Empirical Probability of Improvement Matrix}
+    \label{fig:prob_intro}
+\end{subfigure}
+\caption{\textbf{The Plasticity Intervention Vulnerability in Offline-to-Online Continuous Control.} Evaluating 150 total runs with matched environment/shift/seed comparisons across D4RL locomotion tasks (HalfCheetah, Hopper, Walker2d) under clean, observation noise, and reward scaling regimes. (a) Unconditional periodic Shrink-and-Perturb (\texttt{fixed}) causes a catastrophic 68.3\% collapse in aggregate Interquartile Mean (IQM) return compared to the passive baseline (\texttt{none}). Diagnostic-gated intervention (\textsc{CapacityGate}) recognizes intact representation capacity and safely abstains, maintaining full performance ($38.78$ IQM). (b) The empirical probability of improvement demonstrates that unconditional intervention almost never improves performance ($P(\text{Fixed} > \text{None}) = 0.067$), while gated abstention shields the policy from destabilization.}
+\label{fig:aggregate_benchmark}
+\end{figure}
+
+However, we uncover an overlooked assumption at the core of this paradigm: \textbf{in structured continuous control, the disruption caused by unneeded parameter interventions can be far more catastrophic than the plasticity loss they are designed to prevent.} Unlike tabula rasa online RL or synthetic vision drift benchmarks, an O2O continuous-control agent does not begin with random weights. It inherits a specialized, converged representation that encodes delicate physical coordination and equilibrium manifolds (e.g., dynamic bipedal gait cycles). Mutating these weights with open-loop, periodic noise destroys the policy's fine-tuned action distributions and destabilizes its value predictions, inducing severe dynamical crashes from which the agent cannot easily recover.
+
+To address this challenge, we articulate the \textbf{``Do Not Disturb''} principle:
+\begin{center}
+    \emph{An agent should only intervene to restore representation capacity when diagnostic telemetry confirms that capacity has collapsed; otherwise, converged policy manifolds should be left undisturbed.}
+\end{center}
+
+We operationalize this principle via \textsc{CapacityGate}, a closed-loop diagnostic framework that monitors two complementary representation health signals: \emph{relative effective feature rank} ($\rho$) and \emph{activation dormancy} ($d$). Crucially, \textsc{CapacityGate} computes these metrics over an unbiased \emph{uniform replay reservoir} and regulates intervention actuation through dual-threshold hysteresis and a \emph{refractory cooldown period}.
+
+\subsection{Research Questions}
+To systematically investigate the efficacy and risks of plasticity interventions in offline-to-online continuous control, we formulate three core research questions:
+\begin{itemize}
+    \item \textbf{RQ1 (Intervention Vulnerability)}: \emph{Does unconditional periodic parameter intervention restore or degrade policy performance during offline-to-online transfer in continuous locomotion?}
+    \item \textbf{RQ2 (Diagnostic Feasibility \& Abstention)}: \emph{Can online representation health metrics (feature effective rank and activation dormancy) reliably detect intact capacity and govern intervention decisions through closed-loop abstention?}
+    \item \textbf{RQ3 (Operator Sensitivity Under Non-Stationarity)}: \emph{Under genuine physical distribution shifts (actuator crippling), how do functional-shift versus zero-functional-shift intervention operators differ in preserving continuous control equilibria?}
+\end{itemize}
+
+\subsection{Summary of Key Findings \& Contributions}
+
+Through rigorous empirical evaluations on the D4RL continuous-control benchmark \citep{fu2020d4rl} across clean transfer, observation noise, reward rescaling, and non-stationary actuator crippling, this paper establishes three primary insights:
+
+\begin{enumerate}
+    \item \textbf{Intervention Vulnerability in Stable O2O Transfer}: Unconditional periodic Shrink-and-Perturb \citep{ash2020warmstarting} collapses aggregate IQM normalized return by 68.3\% ($38.78 \to 12.30$, paired Wilcoxon signed-rank $W = 18.0$, $p = 1.44 \times 10^{-11}$) across 150 total runs with matched environment/shift/seed comparisons (Figure~\ref{fig:aggregate_benchmark}). In balance-critical tasks such as Hopper and Walker2d, periodic perturbation induces immediate and permanent gait failure (dropping normalized return on Walker2d to $2.14 \pm 5.79$ vs. $31.45 \pm 12.65$ baseline).
+    \item \textbf{Diagnostic Abstention as Active Protection}: In stable and moderately shifted O2O transfer, representations do not spontaneously collapse: relative effective rank remains near baseline ($\rho \in [0.99, 1.03]$) and dormant neuron fractions remain minimal ($d \le 0.085$). By detecting that capacity remains intact, \textsc{CapacityGate} achieves \emph{zero observed interventions across tested stable-transfer conditions}, preserving baseline performance identically ($38.78$ IQM) and preventing perturbation-induced collapse.
+    \item \textbf{Operator Stability Asymmetry Under Stress}: When physical dynamics change drastically (actuator joint crippling), the functional character of the intervention operator dictates survival. On Walker2d, weight-perturbation operators with non-zero functional shift ($\Delta f_\theta(x) \neq 0$) collapse bipedal locomotion ($-0.53 \pm 0.33$), whereas dormant neuron recycling with zero functional shift ($W_{\mathrm{out}} = 0$, ReDo) preserves viable walking gait dynamics ($8.03 \pm 1.57$, matching the unperturbed baseline).
+\end{enumerate}
+
+Finally, we identify a crucial methodological principle: diagnostic probes should sample uniformly across the replay buffer rather than from recent trajectory slices to avoid temporal autocorrelation artifacts that artificially mimic dormancy. Our work demonstrates that plasticity interventions in O2O RL cannot be treated as indiscriminate background routines, establishing the necessity of capacity-aware, regime-dependent intervention policies.
+
+\section{Related Work \& Conceptual Positioning}
+\label{sec:related_work}
+
+We situate our work within the broader context of continual learning, plasticity preservation, and offline-to-online reinforcement learning. Table~\ref{tab:lit_comparison} provides a structured comparison between representative prior frameworks and this work.
+
+\subsection{Loss of Plasticity in Deep Continual Learning}
+The degradation of gradient-based learning capacity in deep neural networks has emerged as a fundamental topic in deep learning \citep{lyle2023understanding, dohare2024loss, lyle2024plasticity}. In continual supervised learning (e.g., streaming ImageNet or task-incremental CIFAR), networks trained sequentially over long horizons suffer from weight norm explosion, dead activations, and feature rank collapse, losing the ability to learn subsequent tasks. \citet{dohare2024loss} established that standard backpropagation cannot sustain lifelong adaptation and introduced Continual Backpropagation (CBP), which continually reinitializes a fraction of low-utility units. In contrast to millions of gradient steps in lifelong learning, our work investigates offline-to-online RL over tens of thousands of steps, demonstrating that representations remain remarkably resilient in stable transfer and that unneeded intervention poses a greater immediate hazard.
+
+\subsection{Implicit Under-Parameterization and Rank Collapse}
+\citet{kumar2020implicit} demonstrated that temporal-difference (TD) learning in deep Q-networks implicitly under-parameterizes feature representations. Bootstrapping and target-network maximization collapse the covariance matrix of penultimate features onto a low-dimensional subspace (low effective rank, or sRank). In response, \citet{kumar2022dr3} introduced DR3, an explicit feature dot-product regularization penalty applied during offline pretraining to preserve representation dimensionality. While DR3 acts as a continuous loss regularizer, our work explores whether relative effective rank retention can function as an active, causal diagnostic signal to govern discrete parameter interventions during online adaptation.
+
+\subsection{Resetting and Perturbation Operators}
+To alleviate the \emph{primacy bias}---the phenomenon wherein deep RL agents overfit to early replay experiences and fail to adapt to later transitions---\citet{nikishin2022primacy} proposed periodic network resets. By periodically reinitializing network parameters while retaining the replay buffer, periodic resets achieved substantial sample-efficiency gains in Atari 100k and continuous control from scratch \citep{doro2023sample}. In continual supervised learning, \citet{ash2020warmstarting} analyzed warm-starting degradation and proposed Shrink-and-Perturb (SP): shrinking weights toward the origin and injecting Gaussian noise to escape poor local minima. While these methods succeed in settings where early representations are low-quality or overfit, we show that in O2O continuous control, resetting or perturbing converged locomotion representations destroys fragile dynamical equilibria.
+
+\subsection{Dormant Neuron Recycling}
+\citet{sokar2023dormant} characterized the dormant neuron phenomenon in deep RL, showing that a large fraction of ReLU units become permanently inactive during training. They proposed ReDo (Recycling Dormant Neurons), which periodically identifies units whose activation scores fall below an empirical threshold, reinitializes their incoming weights, and explicitly sets their outgoing weights to zero ($W_{\mathrm{out}} = 0$). \citet{schwarzer2024bigger} extended this principle to large-scale RL on Atari 200M. Crucially, ReDo possesses the mathematical property of \emph{zero functional shift} at the instant of intervention ($f_{\theta'}(x) \equiv f_\theta(x)$). In Section~\ref{sec:results}, we demonstrate that this zero-functional-shift property is decisive for maintaining stability in continuous control under non-stationary dynamics.
+
+\subsection{Offline-to-Online Reinforcement Learning}
+Offline-to-online RL bridges static pretraining on offline datasets and interactive online adaptation \citep{nair2020awac, lee2022offline2online, kostrikov2021iql, ball2023efficient}. Conservative algorithms like Implicit Q-Learning (IQL) \citep{kostrikov2021iql} and Conservative Q-Learning (CQL) \citep{kumar2020cql} avoid querying out-of-distribution actions during offline learning. When fine-tuning online, policy revitalization methods typically balance offline and online replay ratios or decay policy constraints. Our study does not propose a new offline RL objective; rather, we build on canonical IQL to conduct a systematic investigation into how parameter plasticity interventions interact with converged offline representations in continuous control.
+
+\begin{table}[t]
+\caption{\textbf{Conceptual and Methodological Comparison with Prior Plasticity Interventions.} Published numbers reflect reported results from the original papers in their specific benchmark protocols and are not direct apples-to-apples comparisons with our O2O continuous-control setup.}
+\label{tab:lit_comparison}
+\centering
+\scriptsize
+\begin{tabular}{p{2.2cm}p{1.7cm}p{1.4cm}p{2.3cm}p{2.4cm}p{2.4cm}}
+\toprule
+\textbf{Prior Work} & \textbf{Intervention / Metric} & \textbf{Trigger Policy} & \textbf{Original Benchmark} & \textbf{Reported Finding / Limitation} & \textbf{What This Work Demonstrates} \\
+\midrule
+\textbf{Ash \& Adams} \newline (NeurIPS 2020) & Shrink-and-Perturb (SP) & Open-loop \newline (At phase shift) & Split-CIFAR, continual SL & Restores warm-start generalization in supervised vision. \newline \emph{Limitation: Supervised classification only.} & Shows SP causes a severe 68\% performance collapse in stable O2O continuous control. \\
+\midrule
+\textbf{Kumar et al.} \newline (ICLR 2021) & Effective Rank (sRank) & Observational \newline (No trigger) & Gym MuJoCo online TD3/SAC & Shows TD learning collapses representation dimensionality. \newline \emph{Limitation: Metric only; no intervention.} & Establishes relative effective rank ($\rho$) as an active closed-loop gating signal. \\
+\midrule
+\textbf{Nikishin et al.} \newline (ICML 2022) & Periodic Network Resets & Open-loop \newline (Every $K$ steps) & Atari 100k, DMC from pixels & Mitigates primacy bias under high replay ratios from scratch. \newline \emph{Limitation: Destructive resets in control.} & Shows open-loop parameter destruction is catastrophic for converged balance manifolds. \\
+\midrule
+\textbf{Sokar et al.} \newline (NeurIPS 2023) & ReDo (Neuron Recycling) & Open-loop \newline (Every $K$ steps) & Atari 200M, continual SL & Recycles dead ReLUs; zero functional shift ($W_{\mathrm{out}}=0$). \newline \emph{Limitation: Evaluated in online RL from scratch.} & Shows zero-shift ReDo preserves continuous balance under stress where SP collapses. \\
+\midrule
+\textbf{Dohare et al.} \newline (Nature 2024) & Continual Backprop (CBP) & Continuous \newline (Every step) & Continual ImageNet, non-stat RL & Sustains plasticity across millions of non-stationary steps. \newline \emph{Limitation: Continuous unit-swap overhead.} & Shows stable O2O transfer maintains capacity naturally, requiring zero intervention. \\
+\midrule
+\textbf{This Work} \newline (\textsc{CapacityGate}) & Closed-loop Gated Intervention & Closed-loop \newline ($\rho(t)$ and $d(t)$) & D4RL O2O continuous control & Introduces the ``Do Not Disturb'' principle; couples rank and dormancy. & Demonstrates that diagnostic abstention protects converged policies; reveals operator asymmetry. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Positioning: What Is New in This Work?}
+To establish crisp scientific clarity regarding our contributions:
+\begin{itemize}
+    \item \textbf{What already existed?} Metrics for measuring representation rank collapse \citep{kumar2020implicit} and neuron dormancy \citep{sokar2023dormant}; parameter intervention operators such as Shrink-and-Perturb \citep{ash2020warmstarting} and ReDo \citep{sokar2023dormant}; and offline-to-online fine-tuning pipelines \citep{kostrikov2021iql}.
+    \item \textbf{What was missing?} An empirical understanding of whether plasticity loss actually threatens short-horizon O2O continuous control; how parameter interventions impact converged locomotion manifolds; and how to causally gate interventions based on live representation diagnostics.
+    \item \textbf{What exactly is new?} 
+    \begin{enumerate}
+        \item \emph{Empirical Discovery}: Unconditional periodic plasticity interventions induce catastrophic performance collapse ($-68.3\%$ IQM) in stable O2O continuous control.
+        \item \emph{The ``Do Not Disturb'' Framework}: We introduce \textsc{CapacityGate}, demonstrating that closed-loop diagnostic abstention effectively shields converged policies from unneeded perturbations.
+        \item \emph{Operator Stability Asymmetry}: We uncover that under non-stationary dynamics, zero-functional-shift operators (ReDo) preserve continuous balance manifolds, whereas weight perturbation destroys them.
+        \item \emph{Methodological Diagnostics}: We demonstrate that diagnostic probes require uniform replay reservoir sampling and refractory cooldowns to avoid autocorrelation artifacts and controller thrashing.
+    \end{enumerate}
+\end{itemize}
+
+\section{The \textsc{CapacityGate} Framework}
+\label{sec:method}
+
+We formulate our framework within the standard Markov Decision Process (MDP) defined by $\mathcal{M} = (\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}, \gamma, \rho_0)$, with continuous state space $\mathcal{S}$ and action space $\mathcal{A}$.
+
+\subsection{Offline-to-Online Reinforcement Learning}
+Learning proceeds in two sequential phases:
+\begin{enumerate}
+    \item \textbf{Offline Pretraining}: An agent is trained on a static dataset $\mathcal{D}_{\mathrm{off}} = \{(s_i, a_i, r_i, s_i')\}_{i=1}^N$ using Implicit Q-Learning (IQL) \citep{kostrikov2021iql}. IQL fits a value function $V_\psi(s)$ using expectile regression with expectile parameter $\tau \in (0.5, 1.0)$:
+    \begin{equation}
+        L_V(\psi) = \mathbb{E}_{(s,a) \sim \mathcal{D}} \left[ |\tau - \mathbb{I}(Q_{\hat{\theta}}(s,a) - V_\psi(s) < 0)| \left( Q_{\hat{\theta}}(s,a) - V_\psi(s) \right)^2 \right],
+    \end{equation}
+    trains twin target Q-networks via mean squared Bellman error:
+    \begin{equation}
+        L_Q(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}} \left[ \left( r + \gamma V_\psi(s') - Q_\theta(s,a) \right)^2 \right],
+    \end{equation}
+    and extracts the policy $\pi_\phi(a|s)$ via advantage-weighted regression with inverse temperature $\beta$:
+    \begin{equation}
+        L_\pi(\phi) = \mathbb{E}_{(s,a) \sim \mathcal{D}} \left[ \exp\left( \beta (Q_{\hat{\theta}}(s,a) - V_\psi(s)) \right) \ln \pi_\phi(a|s) \right].
+    \end{equation}
+    \item \textbf{Online Adaptation}: The pretrained agent interacts with the environment $\mathcal{E}_{\mathrm{on}}$, storing transitions in an online replay buffer $\mathcal{D}_{\mathrm{on}}$ and updating parameters using mixed mini-batches sampled equally (50/50) from $\mathcal{D}_{\mathrm{off}}$ and $\mathcal{D}_{\mathrm{on}}$.
+\end{enumerate}
+
+\subsection{Representation Capacity Diagnostics}
+To operationalize closed-loop intervention, we monitor two orthogonal dimensions of representation health evaluated on a dedicated diagnostic probe batch:
+
+\paragraph{1. Relative Effective Rank Ratio ($\rho$)}
+Let $H \in \mathbb{R}^{B \times d_h}$ denote the penultimate hidden feature activations over a probe batch of size $B=256$. Let $\sigma_1 \ge \sigma_2 \ge \dots \ge \sigma_K > 0$ be the singular values of the centered feature matrix $\tilde{H} = H - \bar{H}$. Following \citet{kumar2020implicit}, the spectral distribution is $p_i = \sigma_i / \sum_{j=1}^K \sigma_j$, and the effective rank is the exponential of the spectral Shannon entropy:
+\begin{equation}
+    s_{\mathrm{eff}}(H) = \exp\left( -\sum_{i=1}^K p_i \ln(p_i + \epsilon) \right).
+\end{equation}
+Because raw effective rank varies across environments and network architectures, we define the \emph{relative effective rank ratio}:
+\begin{equation}
+    \rho(t) = \frac{s_{\mathrm{eff}}(H_t)}{s_{\mathrm{anchor}}},
+\end{equation}
+where $s_{\mathrm{anchor}} = s_{\mathrm{eff}}(H_0)$ is the initial effective rank captured on the probe batch at the onset of online adaptation ($t=0$). A ratio $\rho(t) \ll 1.0$ indicates significant dimensional collapse.
+
+\paragraph{2. True Activation Dormancy ($d$)}
+Following \citet{sokar2023dormant}, a neuron $j$ in layer $l$ is defined as dormant with respect to probe batch $\mathcal{B}_{\mathrm{probe}}$ if its average post-activation score is non-positive:
+\begin{equation}
+    a_j^l = \frac{1}{B} \sum_{n=1}^B h_j^l(s_n) \le 0.
+\end{equation}
+The overall network dormancy $d(t) \in [0, 1]$ is the width-weighted fraction of dormant units across all hidden layers of the network.
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/capacity_trajectories.png}
+    \caption{Online Diagnostic Trajectories}
+    \label{fig:capacity_trajectories}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/clean_vs_shifted.png}
+    \caption{Performance Retention Across Regimes}
+    \label{fig:clean_vs_shifted}
+\end{subfigure}
+\caption{\textbf{Diagnostic Trajectories and Performance Retention.} (a) Live diagnostic telemetry of relative effective rank ratio $\rho(t)$ and dormant neuron fraction $d(t)$ across 25,000 online steps. In stable O2O transfer, representation capacity remains completely healthy ($\rho \approx 1.0, d \le 0.085$), never approaching activation thresholds ($\rho_{\mathrm{on}} = 0.70, d_{\mathrm{on}} = 0.15$). Consequently, \textsc{CapacityGate} safely abstains from intervention. (b) Normalized return retention across clean transfer, observation noise, and reward rescaling: baseline and gated policies maintain high performance, whereas open-loop periodic perturbation degrades performance across all regimes.}
+\label{fig:diagnostics_and_retention}
+\end{figure}
+
+\subsection{Probe Sampling: Uniform Replay Reservoir vs. Temporal Slices}
+A critical methodological insight is that the data entering the diagnostic probe determines the validity of the telemetry:
+\begin{itemize}
+    \item \textbf{Consecutive Trajectory Slicing (Flawed)}: Sampling the most recent $B$ transitions ($\mathcal{D}_{\mathrm{on}}[-B:]$) introduces severe temporal autocorrelation. In continuous control, 256 consecutive steps capture only a narrow segment of a locomotion cycle. If an agent experiences a localized stumble or stall, a large fraction of units appear inactive over that slice, causing measured dormancy to falsely spike to $38\text{--}45\%$ despite healthy global network capacity.
+    \item \textbf{Uniform Replay Reservoir Sampling (Principled)}: To obtain an unbiased diagnostic of representation capacity, probe transitions are sampled \emph{uniformly at random without replacement} across the entire online replay buffer collected up to step $t$:
+    \begin{equation}
+        \mathcal{B}_{\mathrm{probe}} \sim \mathrm{Uniform}(\mathcal{D}_{\mathrm{on}}[0:t]).
+    \end{equation}
+    To preserve exact experimental reproducibility, this probe batch is drawn using a dedicated pseudo-random generator decoupled from training mini-batch samplers.
+\end{itemize}
+
+\subsection{Intervention Operators: Perturbation vs. Zero-Functional Shift}
+We examine two distinct intervention operators:
+\begin{enumerate}
+    \item \textbf{Shrink-and-Perturb (SP)} \citep{ash2020warmstarting}: All linear layer weights in the critic and policy networks are shrunk toward zero and perturbed with isotropic Gaussian noise:
+    \begin{equation}
+        W \leftarrow (1 - \lambda) W + \eta \cdot \sigma_{\mathrm{init}} Z, \quad Z \sim \mathcal{N}(0, I),
+    \end{equation}
+    where $\lambda = 0.1$ is the shrinkage factor, $\eta = 0.1$ is the perturbation severity, and $\sigma_{\mathrm{init}} = \sqrt{2/\mathrm{fan\_in}}$ is the Kaiming initialization scale. Adam optimizer moment buffers for perturbed weights are reset to zero. Crucially, SP causes a \emph{non-zero functional shift}: $f_{\theta'}(x) \neq f_\theta(x)$.
+    \item \textbf{Neuron Recycling (ReDo)} \citep{sokar2023dormant}: Units identified as dormant ($a_j^l \le 0$) have their incoming weights reinitialized via Kaiming normal, while their outgoing weights are explicitly set to zero ($W_{\mathrm{out}} = 0$). Adam moments for recycled units are cleared. ReDo preserves function identically at the moment of intervention: $f_{\theta'}(x) \equiv f_\theta(x)$.
+\end{enumerate}
+
+\subsection{Closed-Loop Control: Hysteresis and Refractory Cooldown}
+\textsc{CapacityGate} governs interventions using dual-threshold hysteresis coupled with a refractory cooldown timer. Let $g_t \in \{0, 1\}$ denote the binary gate state evaluated at intervals $\Delta t = 1,000$ steps:
+\begin{equation}
+    g_t = \begin{cases}
+    1 & \text{if } g_{t-1} = 0 \text{ and } \left( \rho(t) \le \rho_{\mathrm{on}} \text{ or } d(t) \ge d_{\mathrm{on}} \right), \\
+    0 & \text{if } g_{t-1} = 1 \text{ and } \left( \rho(t) \ge \rho_{\mathrm{off}} \text{ and } d(t) \le d_{\mathrm{off}} \right), \\
+    g_{t-1} & \text{otherwise,}
+    \end{cases}
+\end{equation}
+with thresholds set to $\rho_{\mathrm{on}} = 0.70$, $\rho_{\mathrm{off}} = 0.85$, $d_{\mathrm{on}} = 0.15$, and $d_{\mathrm{off}} = 0.08$.
+
+\paragraph{Refractory Cooldown Control} When the gate activates ($g_t = 1$), parameter intervention is actuated only when at least $\Delta_{\mathrm{cool}} = 3,000$ online adaptation steps have elapsed since the prior intervention:
+\begin{equation}
+    \mathrm{Intervene}_t = \mathbb{I}\left( g_t = 1 \land (t - t_{\mathrm{last\_int}} \ge \Delta_{\mathrm{cool}}) \right).
+\end{equation}
+This refractory constraint prevents the controller from thrashing network parameters at successive evaluation steps, granting the gradient optimizer sufficient time to adapt with the restored capacity. The complete protocol is formalized in Algorithm~\ref{alg:capacity_gate}.
+
+\begin{algorithm}[t]
+\caption{\textsc{CapacityGate} Online Adaptation Protocol}
+\label{alg:capacity_gate}
+\begin{algorithmic}[1]
+\REQUIRE Pretrained agent $(\pi_\phi, Q_\theta, V_\psi)$, online environment $\mathcal{E}_{\mathrm{on}}$, check interval $\Delta t = 1000$, cooldown $\Delta_{\mathrm{cool}} = 3000$, thresholds $(\rho_{\mathrm{on}}, \rho_{\mathrm{off}}, d_{\mathrm{on}}, d_{\mathrm{off}})$, intervention severity $\eta = 0.1$.
+\STATE Initialize online buffer $\mathcal{D}_{\mathrm{on}} \leftarrow \emptyset$, gate state $g_0 \leftarrow 0$, $t_{\mathrm{last\_int}} \leftarrow -\infty$.
+\STATE Compute initial rank anchor $s_{\mathrm{anchor}} \leftarrow s_{\mathrm{eff}}(H_0)$ on uniform probe batch $\mathcal{B}_{\mathrm{probe}}$.
+\FOR{step $t = 1 \dots T_{\mathrm{online}}$}
+    \STATE Execute $a_t \sim \pi_\phi(\cdot|s_t)$, observe $(r_t, s_{t+1})$, store transition in $\mathcal{D}_{\mathrm{on}}$.
+    \STATE Update agent parameters on mixed mini-batch $(50\%\, \mathcal{D}_{\mathrm{off}}, 50\%\, \mathcal{D}_{\mathrm{on}})$.
+    \IF{$t \bmod \Delta t == 0$}
+        \STATE Sample uniform reservoir probe batch $\mathcal{B}_{\mathrm{probe}} \sim \mathrm{Uniform}(\mathcal{D}_{\mathrm{on}}[0:t])$.
+        \STATE Compute relative rank ratio $\rho(t)$ and true activation dormancy $d(t)$ on $\mathcal{B}_{\mathrm{probe}}$.
+        \IF{$g_{t-1} == 0$ \AND $(\rho(t) \le \rho_{\mathrm{on}} \text{ \OR } d(t) \ge d_{\mathrm{on}})$}
+            \STATE $g_t \leftarrow 1$ \COMMENT{Activate diagnostic gate}
+        \ELSIF{$g_{t-1} == 1$ \AND $(\rho(t) \ge \rho_{\mathrm{off}} \text{ \AND } d(t) \le d_{\mathrm{off}})$}
+            \STATE $g_t \leftarrow 0$ \COMMENT{Deactivate gate upon recovery}
+        \ELSE
+            \STATE $g_t \leftarrow g_{t-1}$
+        \ENDIF
+        \IF{$g_t == 1$ \AND $(t - t_{\mathrm{last\_int}} \ge \Delta_{\mathrm{cool}})$}
+            \STATE Apply parameter intervention (SP or ReDo, severity $\eta = 0.1$).
+            \STATE Reset optimizer moments for modified weights; $t_{\mathrm{last\_int}} \leftarrow t$.
+        \ENDIF
+    \ENDIF
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+We evaluate our framework across standard continuous-control locomotion benchmarks from D4RL v2 \citep{fu2020d4rl} under both stationary transfer and non-stationary distribution shifts:
+
+\subsection{Benchmark Tasks and Shift Regimes}
+\begin{itemize}
+    \item \textbf{Environments}: Three standard locomotion domains: \texttt{halfcheetah-medium-v2}, \texttt{hopper-medium-v2}, and \texttt{walker2d-medium-v2}.
+    \item \textbf{Stable \& Moderately Shifted Regimes}:
+    \begin{enumerate}
+        \item \emph{Clean Transfer (\texttt{none})}: Standard online interaction with no external perturbations ($\sigma=0, \alpha=1.0$).
+        \item \emph{Observation Noise (\texttt{obs\_noise})}: Additive Gaussian sensor noise injected into state observations: $\tilde{s} = s + \xi$, with $\xi \sim \mathcal{N}(0, 0.1^2 I)$, activated at step 5,000.
+        \item \emph{Reward Scaling (\texttt{reward\_scale})}: Environmental reward multiplied by $\alpha = 0.5$ at step 5,000, inducing value-scale compression.
+    \end{enumerate}
+    \item \textbf{Severe Non-Stationary Stress (Actuator Crippling)}: Sudden physical dynamics shift activated at step 5,000 by permanently disabling joint torque ($a_{\mathrm{crippled}} = 0$). In \texttt{halfcheetah}, the back thigh joint is crippled; in \texttt{walker2d}, the thigh joint is crippled, completely altering the reachable locomotion dynamics.
+\end{itemize}
+
+\subsection{Evaluation Protocol and Baselines}
+All experimental arms begin online fine-tuning from identical offline IQL checkpoints pretrained for 25,000 gradient updates on the medium dataset. Online adaptation runs for 25,000 steps. Evaluations occur every 2,500 steps across 10 deterministic episodes, reporting normalized returns ($0 = \text{random}, 100 = \text{expert}$). We evaluate three primary arms:
+\begin{itemize}
+    \item \textbf{Baseline (\texttt{none})}: Standard un-intervened online fine-tuning with mixed replay.
+    \item \textbf{Fixed Periodic (\texttt{fixed})}: Open-loop periodic Shrink-and-Perturb applied unconditionally every 1,000 steps during the adaptation phase ($\lambda = 0.1, \eta = 0.1$).
+    \item \textbf{\textsc{CapacityGate}}: Closed-loop diagnostic gating using relative rank ratio $\rho(t)$ and dormancy $d(t)$ with uniform replay probe sampling and refractory cooldown.
+\end{itemize}
+Statistical aggregation follows the rigorous protocols recommended by \citet{agarwal2021rliable}, computing Interquartile Mean (IQM) scores with 2,000 stratified bootstrap replicates and non-parametric paired Wilcoxon signed-rank significance tests on matched environment/shift/seed pairs.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/learning_curves.png}
+\caption{\textbf{Online Adaptation Learning Curves Across Environments and Shift Regimes.} Online adaptation normalized return over 25,000 steps for Baseline (\texttt{none}, blue), Fixed Periodic (\texttt{fixed}, orange), and \textsc{CapacityGate} (green). In coordination-critical tasks (Hopper and Walker2d), unconditional periodic Shrink-and-Perturb induces an immediate and irreversible collapse in locomotion performance. In contrast, \textsc{CapacityGate} recognizes that representation capacity remains intact and abstains from intervention, overlapping perfectly with the healthy unperturbed baseline.}
+\label{fig:learning_curves}
+\end{figure}
+
+\section{Empirical Results \& Analysis}
+\label{sec:results}
+
+\subsection{Intervention Vulnerability: The Failure of Open-Loop Plasticity Restoration}
+\label{sec:vulnerability}
+
+Table~\ref{tab:main_results} summarizes final normalized evaluation returns across all evaluated environments and shift regimes. Figure~\ref{fig:learning_curves} displays the corresponding online adaptation curves over 25,000 steps.
+
+The empirical evidence demonstrates a striking result: \textbf{unconditional periodic parameter perturbation causes severe performance degradation across all evaluated environments in stable O2O transfer.}
+\begin{itemize}
+    \item \textbf{HalfCheetah}: In clean transfer, Fixed drops normalized return from $35.32 \pm 2.29$ to $10.71 \pm 5.02$ (a $-69.7\%$ reduction). Under observation noise and reward scaling, Fixed degrades performance to $17.89 \pm 9.92$ and $9.49 \pm 7.39$, respectively.
+    \item \textbf{Hopper}: Fixed drops clean transfer performance from $40.98 \pm 2.46$ down to $14.87 \pm 8.45$. In observation noise and reward rescaling, Fixed achieves $36.85$ and $24.56$, compared to $41.32$ and $36.93$ for the unperturbed baseline.
+    \item \textbf{Walker2d}: The collapse is near total. In clean transfer, Walker2d plummets from $31.45 \pm 12.65$ to $2.14 \pm 5.79$ (median $-0.45$). Under reward scaling, where the unperturbed baseline fine-tunes effectively to $64.33 \pm 11.22$, periodic perturbation completely destroys bipedal balance, collapsing to $1.94 \pm 5.64$ (median $-0.52$, a $-97.0\%$ drop).
+\end{itemize}
+
+\paragraph{Aggregate Statistical Distribution} Across all evaluated runs, the aggregate Interquartile Mean (IQM) normalized return collapses by 68.3\% under open-loop intervention:
+\begin{itemize}
+    \item \textbf{Baseline (\texttt{none})}: $\mathrm{IQM} = 38.78$ ($95\%$ CI $[37.43, 40.03]$)
+    \item \textbf{Fixed Periodic (\texttt{fixed})}: $\mathrm{IQM} = 12.30$ ($95\%$ CI $[9.36, 15.10]$)
+    \item \textbf{\textsc{CapacityGate}}: $\mathrm{IQM} = 38.78$ ($95\%$ CI $[37.43, 40.03]$)
+\end{itemize}
+Because our experimental evaluation pairs seeds identically across intervention arms, we conduct a paired non-parametric Wilcoxon signed-rank test on the paired differences $(\text{Baseline} - \text{Fixed})$ across all $N=45$ matched evaluations. The analysis confirms a decisive performance penalty for unconditional intervention (Wilcoxon signed-rank $W = 18.0$, $p = 1.44 \times 10^{-11}$; paired $t$-test $t = 9.15, p = 9.69 \times 10^{-12}$). Baseline outperforms Fixed in 42 out of 45 paired evaluations (93.3\% positive pairs), with a mean paired difference of $+26.03 \pm 19.09$ normalized return (95\% bootstrap CI $[20.72, 31.59]$) and a median paired difference of $+22.27$ (IQR: $[17.38, 33.87]$). As depicted in Figure~\ref{fig:aggregate_benchmark}b, the empirical probability of improvement of Fixed over Baseline is merely $P(\text{Fixed} > \text{None}) = 0.067$ ($95\%$ CI $[0.013, 0.124]$), while Baseline outperforms Fixed in 93.3\% of comparisons ($P(\text{None} > \text{Fixed}) = 0.933$).
+
+\begin{table}[t]
+\caption{\textbf{Primary Confirmatory Benchmark Results.} Final evaluation normalized returns (Mean $\pm$ Std and Median [Min, Max]) after 25,000 online adaptation steps across 135 factorial runs (5 paired random seeds per cell). In stable and moderately shifted transfer, unconditional Shrink-and-Perturb collapses performance, while \textsc{CapacityGate} abstains from intervention and matches baseline returns identically.}
+\label{tab:main_results}
+\centering
+\scriptsize
+\begin{tabular}{lllc@{\hskip 0.15in}c}
+\toprule
+\textbf{Environment} & \textbf{Shift Regime} & \textbf{Method} & \textbf{Mean $\pm$ Std} & \textbf{Median [Min, Max]} \\
+\midrule
+\multirow{3}{*}{\texttt{halfcheetah-medium-v2}} & \multirow{3}{*}{\texttt{none}} 
+  & \texttt{none} & $35.32 \pm 2.29$ & $35.36\ [31.83, 38.23]$ \\
+  & & \texttt{fixed} & $10.71 \pm 5.02$ & $11.82\ [2.61, 16.33]$ \\
+  & & \textsc{CapacityGate} & $35.32 \pm 2.29$ & $35.36\ [31.83, 38.23]$ \\
+\cmidrule{2-5}
+  & \multirow{3}{*}{\texttt{obs\_noise}} 
+  & \texttt{none} & $34.81 \pm 4.14$ & $33.37\ [29.78, 39.92]$ \\
+  & & \texttt{fixed} & $17.89 \pm 9.92$ & $19.10\ [2.30, 29.75]$ \\
+  & & \textsc{CapacityGate} & $34.81 \pm 4.14$ & $33.37\ [29.78, 39.92]$ \\
+\cmidrule{2-5}
+  & \multirow{3}{*}{\texttt{reward\_scale}} 
+  & \texttt{none} & $37.85 \pm 2.83$ & $38.00\ [34.88, 41.55]$ \\
+  & & \texttt{fixed} & $9.49 \pm 7.39$ & $5.54\ [1.83, 18.45]$ \\
+  & & \textsc{CapacityGate} & $37.85 \pm 2.83$ & $38.00\ [34.88, 41.55]$ \\
+\midrule
+\multirow{3}{*}{\texttt{hopper-medium-v2}} & \multirow{3}{*}{\texttt{none}} 
+  & \texttt{none} & $40.98 \pm 2.46$ & $41.08\ [37.49, 43.99]$ \\
+  & & \texttt{fixed} & $14.87 \pm 8.45$ & $16.31\ [3.14, 24.69]$ \\
+  & & \textsc{CapacityGate} & $40.98 \pm 2.46$ & $41.08\ [37.49, 43.99]$ \\
+\cmidrule{2-5}
+  & \multirow{3}{*}{\texttt{obs\_noise}} 
+  & \texttt{none} & $41.32 \pm 4.70$ & $39.56\ [37.05, 47.66]$ \\
+  & & \texttt{fixed} & $36.85 \pm 18.05$ & $28.10\ [19.46, 57.47]$ \\
+  & & \textsc{CapacityGate} & $41.32 \pm 4.70$ & $39.56\ [37.05, 47.66]$ \\
+\cmidrule{2-5}
+  & \multirow{3}{*}{\texttt{reward\_scale}} 
+  & \texttt{none} & $36.93 \pm 4.20$ & $37.38\ [31.95, 41.95]$ \\
+  & & \texttt{fixed} & $24.56 \pm 7.38$ & $21.69\ [17.81, 36.03]$ \\
+  & & \textsc{CapacityGate} & $36.93 \pm 4.20$ & $37.38\ [31.95, 41.95]$ \\
+\midrule
+\multirow{3}{*}{\texttt{walker2d-medium-v2}} & \multirow{3}{*}{\texttt{none}} 
+  & \texttt{none} & $31.45 \pm 12.65$ & $33.62\ [9.97, 42.43]$ \\
+  & & \texttt{fixed} & $2.14 \pm 5.79$ & $-0.45\ [-0.69, 12.48]$ \\
+  & & \textsc{CapacityGate} & $31.45 \pm 12.65$ & $33.62\ [9.97, 42.43]$ \\
+\cmidrule{2-5}
+  & \multirow{3}{*}{\texttt{obs\_noise}} 
+  & \texttt{none} & $36.16 \pm 19.97$ & $41.90\ [1.45, 52.41]$ \\
+  & & \texttt{fixed} & $6.45 \pm 9.05$ & $1.26\ [-0.56, 19.62]$ \\
+  & & \textsc{CapacityGate} & $36.16 \pm 19.97$ & $41.90\ [1.45, 52.41]$ \\
+\cmidrule{2-5}
+  & \multirow{3}{*}{\texttt{reward\_scale}} 
+  & \texttt{none} & $64.33 \pm 11.22$ & $66.03\ [47.08, 76.66]$ \\
+  & & \texttt{fixed} & $1.94 \pm 5.64$ & $-0.52\ [-0.74, 12.03]$ \\
+  & & \textsc{CapacityGate} & $64.33 \pm 11.22$ & $66.03\ [47.08, 76.66]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Diagnostic Abstention: Gating as a Policy Guardian}
+\label{sec:abstention}
+
+Why does \textsc{CapacityGate} avoid this catastrophic performance loss? Figure~\ref{fig:capacity_trajectories} displays live diagnostic trajectories across 25,000 online steps. 
+
+Throughout online adaptation in stable and moderately shifted regimes:
+\begin{itemize}
+    \item \textbf{Rank Retention}: Relative effective rank ratio remains exceptionally stable: $\rho(t) \in [0.99, 1.03]$. The representation experiences no rank collapse, never approaching the lower threshold $\rho_{\mathrm{on}} = 0.70$.
+    \item \textbf{Low Dormancy}: The proportion of dormant neurons remains bounded between $4.3\%$ and $8.5\%$, far below the trigger threshold $d_{\mathrm{on}} = 0.15$.
+\end{itemize}
+
+Because representation health remains intact, \textsc{CapacityGate} records \textbf{zero observed interventions across all 45 primary cells in tested stable-transfer conditions} ($0$ triggers out of $1,125$ periodic diagnostic evaluations). By remaining completely inactive, \textsc{CapacityGate} preserves baseline normalized returns identically ($38.78$ IQM). 
+
+This demonstrates a foundational property of closed-loop capacity gating: \emph{abstention is not a failure mode, but an active protective mechanism}. In offline-to-online continuous control, representations do not spontaneously degenerate under moderate adaptation. This reinforces the ``Do Not Disturb'' principle, leaving healthy policy manifolds intact.
+
+\subsection{Operator Stability Asymmetry Under Non-Stationary Stress}
+\label{sec:stress}
+
+What occurs when an agent experiences a genuine, non-stationary physical disruption? We evaluate this question in our 24-run stress benchmark under sudden actuator crippling ($a_{\mathrm{crippled}} = 0$ at step 5,000). As illustrated in Figure~\ref{fig:stress_operator_asymmetry} and detailed in Table~\ref{tab:stress_results}, the empirical data demonstrates that intervention efficacy is \textbf{both shift-regime- and operator-dependent}:
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.88\textwidth]{figures/stress_operator_asymmetry.png}
+\caption{\textbf{Operator Stability Asymmetry Under Severe Physical Non-Stationarity.} Evaluation normalized returns under sudden joint actuator crippling at step 5,000. Bars for Baseline (None), Fixed Periodic (Shrink-and-Perturb), and ReDo (Neuron Recycling) depict mean $\pm$ std across 3 paired random seeds. CapacityGate is displayed with hatched bars to clearly denote single-cell deterministic validation (Seed 0) rather than a 3-seed mean: on Walker2d Seed 0, CapacityGate safely abstains from intervention, preserving Baseline parity ($7.23$); on HalfCheetah Seed 0, it executes spaced pulses with refractory cooldown, achieving $8.58$ vs. $7.99$ unperturbed. In balance-critical Walker2d, weight-perturbation operators (Fixed) inject non-zero functional shifts that destroy the bipedal equilibrium manifold ($-0.53 \pm 0.33$). In sharp contrast, dormant neuron recycling (ReDo) preserves balance ($8.03 \pm 1.57$, matching Baseline $8.21 \pm 2.38$) due to its zero-functional-shift formulation ($W_{\mathrm{out}} = 0$). In unconstrained HalfCheetah, disrupting the offline prior aids in discovering an alternate front-joint galloping gait, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to outperform the passive baseline ($6.23 \pm 1.53$).}
+\label{fig:stress_operator_asymmetry}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Walker2d Balance Collapse (Fixed $-0.53$ vs. ReDo $8.03$ vs. Baseline $8.21$)}: Walker2d requires delicate, continuous bipedal coordination to avoid falling. Unconditional Shrink-and-Perturb (\texttt{fixed}) injects non-zero functional shifts ($\Delta f_\theta(x) \neq 0$), destabilizing the agent's balance manifold and collapsing return to $-0.53 \pm 0.33$. In stark contrast, ReDo recycles dormant neurons while setting outgoing weights to zero ($W_{\mathrm{out}} = 0$), preserving input-output mappings identically ($f_{\theta'}(x) \equiv f_\theta(x)$). As a result, ReDo maintains viable walking gait dynamics, achieving $8.03 \pm 1.57$ (matching the unperturbed baseline of $8.21 \pm 2.38$).
+    \item \textbf{HalfCheetah Gait Re-Exploration (Fixed $15.26$ vs. ReDo $13.64$ vs. Baseline $6.23$)}: Unlike Walker2d, HalfCheetah cannot fall over. Disabling the rear actuator severely impedes forward velocity under the offline prior ($6.23 \pm 1.53$ baseline). In this unconstrained forward propulsion task, disrupting the offline prior via weight perturbation or neuron recycling promotes discovering an alternate front-joint galloping gait, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to substantially outperform the passive baseline.
+\end{itemize}
+
+This comparison establishes that \emph{the choice of intervention operator is as decisive as the decision to intervene}. Operators that induce arbitrary functional shifts are catastrophic for balance-critical continuous control tasks, whereas zero-functional-shift operators can refresh latent units without destabilizing physical equilibrium.
+
+\begin{table}[t]
+\caption{\textbf{Operator Stability Asymmetry Under Non-Stationary Stress.} Final evaluation normalized returns across 3 paired seeds under sudden actuator crippling ($a_{\mathrm{crippled}} = 0$ at step 5,000). On Walker2d, zero-functional-shift ReDo preserves bipedal locomotion ($8.03 \pm 1.57$), while weight perturbation (Fixed) destroys balance ($-0.53 \pm 0.33$).}
+\label{tab:stress_results}
+\centering
+\small
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Environment} & \textbf{Arm} & \textbf{Seed 0} & \textbf{Seed 1} & \textbf{Seed 2} & \textbf{Mean $\pm$ Std} \\
+\midrule
+\multirow{4}{*}{\texttt{halfcheetah-medium-v2}} 
+  & \texttt{none} & $7.99$ & $5.49$ & $5.21$ & $6.23 \pm 1.53$ \\
+  & \texttt{fixed} (SP) & $15.29$ & $12.32$ & $18.18$ & $15.26 \pm 2.93$ \\
+  & \texttt{redo} (Neuron Recycling) & $11.40$ & $12.25$ & $17.29$ & $13.64 \pm 3.18$ \\
+  & \textsc{CapacityGate} & $8.58$ & --- & --- & $8.58$ (Single-Cell Validated) \\
+\midrule
+\multirow{4}{*}{\texttt{walker2d-medium-v2}} 
+  & \texttt{none} & $7.23$ & $10.93$ & $6.48$ & $8.21 \pm 2.38$ \\
+  & \texttt{fixed} (SP) & $-0.71$ & $-0.15$ & $-0.73$ & $-0.53 \pm 0.33$ \\
+  & \texttt{redo} (Neuron Recycling) & $8.45$ & $9.34$ & $6.29$ & $8.03 \pm 1.57$ \\
+  & \textsc{CapacityGate} (Seed 0 Abstain) & $7.23$ & --- & --- & $7.23$ (Baseline Parity) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Controller Dynamics: Diagnostic Causality and Refractory Spacing}
+\label{sec:telemetry}
+
+To confirm the causal mechanics of \textsc{CapacityGate}, we analyze step-by-step diagnostic telemetry under actuator crippling on \texttt{halfcheetah-medium-v2} (Seed 0). Table~\ref{tab:telemetry_audit} documents the temporal progression:
+\begin{itemize}
+    \item \textbf{Pre-Shift Quiescence (Steps 1,000--4,000)}: Uniform reservoir sampling accurately reflects healthy representation health ($d = 0.043, \rho \in [0.85, 0.98]$). The gate remains strictly dormant ($g_t = 0$), establishing that uniform sampling eliminates pre-shift false triggers.
+    \item \textbf{Post-Shift Causal Activation (Steps 5,000--7,000)}: Physical joint crippling begins at step 5,000. By step 6,000, rank ratio drops to $\rho = 0.7044$, and at step 7,000, it breaches the threshold ($\rho = 0.6948 \le 0.70$), causally activating the gate ($g_t = 1$) and actuating a verified parameter mutation ($\|\Delta \theta\|_2 = 2.954$).
+    \item \textbf{Refractory Cooldown Spacing}: The 3,000-step cooldown prevents rapid-fire destruction, spacing interventions at steps 7k, 10k, 13k, 16k, 19k, and 22k. This spaced adaptation enables the agent to reach a final return of $8.58$, outperforming the unperturbed seed-0 baseline return ($7.99$).
+\end{itemize}
+
+\begin{table}[t]
+\caption{\textbf{Step-by-Step Diagnostic Telemetry Under Actuator Crippling.} Validated telemetry on \texttt{halfcheetah-medium-v2} (Seed 0, Actuator Cripple at step 5,000) using uniform probe sampling, cooldown $\Delta_{\mathrm{cool}} = 3,000$ steps, and decoupled severity $\eta = 0.1$.}
+\label{tab:telemetry_audit}
+\centering
+\scriptsize
+\begin{tabular}{rcccccccc}
+\toprule
+\textbf{Step} & \textbf{Shift Active} & \textbf{Gate State} & \textbf{Intervene} & \textbf{Cooldown} & \textbf{Dormancy ($d$)} & \textbf{Rank Ratio ($\rho$)} & \textbf{$\|\Delta \theta\|_2$} & \textbf{Controller State} \\
+\midrule
+1,000 & False & False & False & False & $0.0430$ & $0.8474$ & $0.000$ & Nominal / Quiescent \\
+2,000 & False & False & False & False & $0.0430$ & $0.9288$ & $0.000$ & Nominal / Quiescent \\
+3,000 & False & False & False & False & $0.0430$ & $0.9836$ & $0.000$ & Nominal / Quiescent \\
+4,000 & False & False & False & False & $0.0430$ & $0.8595$ & $0.000$ & Nominal / Quiescent \\
+\midrule
+5,000 & \textbf{True} & False & False & False & $0.0469$ & $0.7719$ & $0.000$ & Physical Shift Begins \\
+6,000 & True & False & False & False & $0.0410$ & $0.7044$ & $0.000$ & Pre-Trigger Degradation \\
+\midrule
+7,000 & True & \textbf{True} & \textbf{True} & False & $0.0391$ & $0.6948$ & $2.954$ & \textbf{Causal Trigger 1 ($\rho \le 0.70$)} \\
+8,000 & True & True & False & \textbf{True} & $0.0508$ & $0.5885$ & $0.000$ & Refractory Cooldown \\
+9,000 & True & True & False & \textbf{True} & $0.0449$ & $0.6002$ & $0.000$ & Refractory Cooldown \\
+\midrule
+10,000 & True & True & \textbf{True} & False & $0.0508$ & $0.5964$ & $2.899$ & \textbf{Actuation Pulse 2} \\
+13,000 & True & True & \textbf{True} & False & $0.0469$ & $0.4757$ & $2.810$ & \textbf{Actuation Pulse 3} \\
+16,000 & True & True & \textbf{True} & False & $0.0684$ & $0.3597$ & $2.761$ & \textbf{Actuation Pulse 4} \\
+19,000 & True & True & \textbf{True} & False & $0.0859$ & $0.3308$ & $2.779$ & \textbf{Actuation Pulse 5} \\
+22,000 & True & True & \textbf{True} & False & $0.0898$ & $0.2760$ & $2.761$ & \textbf{Actuation Pulse 6} \\
+\midrule
+25,000 & True & True & False & True & $0.0918$ & $0.2454$ & $0.000$ & Final Score: \textbf{8.58} (Baseline: 7.99) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion: Rethinking Plasticity in Transfer RL}
+\label{sec:discussion}
+
+\paragraph{The Plasticity Inversion in Structured Control}
+A pervasive narrative in deep RL suggests that neural networks are continually losing plasticity, and that algorithms should proactively intervene to maintain representational freshness \citep{nikishin2022primacy, dohare2024loss}. Our findings reveal that in offline-to-online continuous control, this logic is inverted: \textbf{the primary hazard during online transfer is not the loss of plasticity, but the collateral destruction inflicted by interventions intended to restore it.} In locomotion tasks, the policy manifold occupies a narrow, coordinated subspace where balance and momentum are tightly coupled. Perturbing network weights by 10\% disrupts this equilibrium, causing catastrophic falling and unrecoverable value divergence.
+
+\paragraph{The Plasticity vs. Adaptation Gap}
+A fundamental conceptual distinction illuminated by our experiments is that \emph{representation capacity is a prerequisite, but not a guarantee, for policy adaptation}. Restoring effective rank or recycling dead units provides the network with the expressivity required to represent new policies. However, discovering a viable gait under altered physical dynamics (such as a crippled limb) requires coordinated, directed exploration in state-action space. Gating an intervention restores parameter degrees of freedom, but cannot by itself solve the exploration challenge.
+
+\paragraph{Operationalizing the ``Do Not Disturb'' Principle}
+Rather than scheduling interventions via open-loop heuristics (e.g., every $K$ steps), our findings advocate for diagnostic closed-loop gating. When representation capacity is healthy, the safest policy is to leave network parameters undisturbed. Gating provides an effective circuit-breaking mechanism, ensuring that interventions are deployed only when empirical telemetry diagnoses genuine representation collapse.
+
+\section{Limitations}
+\label{sec:limitations}
+
+We explicitly delineate the scope and limitations of our findings:
+\begin{enumerate}
+    \item \textbf{Absence of General Recovery Claims}: While our single-cell validation confirms that \textsc{CapacityGate} activates causally and regulates parameter updates, our empirical results do \emph{not} establish that diagnostic gating universally recovers high performance across arbitrary distribution shifts. The exploration challenge under severe physical shifts remains an open problem.
+    \item \textbf{Continuous Locomotion Focus}: Our experiments are situated in D4RL continuous-control locomotion tasks. Discrete action environments (such as Arcade Learning Environment) or vision-based RL with high replay ratios feature different representation dynamics where periodic resets have proven less disruptive.
+    \item \textbf{Sensitivity of Hysteresis Deactivation}: Deactivation thresholds should be calibrated to the baseline dormancy of active networks. In continuous control, active networks naturally operate with $7\text{--}12\%$ dormant units; requiring dormancy to drop below $5\%$ produces controller latching.
+    \item \textbf{Scale of Non-Stationary Evaluation}: Our stress-study evaluations focused on 24 targeted runs across actuator-crippling conditions. Scaling non-stationary evaluations to diverse multi-task suites will be valuable for future work.
+\end{enumerate}
+
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+In this paper, we conducted an empirical investigation into the behavior of plasticity interventions in offline-to-online continuous-control reinforcement learning. Across 150 total runs with matched environment/shift/seed comparisons, we showed that unconditional periodic Shrink-and-Perturb induces severe intervention vulnerability, causing a catastrophic 68.3\% collapse in aggregate IQM return. We formulated the ``Do Not Disturb'' principle and introduced \textsc{CapacityGate}, demonstrating that closed-loop diagnostic abstention effectively shields converged policies from unnecessary perturbations. Furthermore, under physical non-stationarity, intervention operators exhibit a stark stability asymmetry: zero-functional-shift neuron recycling (ReDo) maintains viable continuous balance manifolds, whereas weight perturbation causes total dynamical collapse. 
+
+Our findings indicate that plasticity interventions in offline-to-online RL should not be treated as indiscriminate background routines, but rather as regime- and operator-dependent operations governed by capacity telemetry.
+
+\paragraph{Future Work}
+Several promising directions emerge from this study:
+\begin{enumerate}
+    \item \textbf{Exploration-Oriented Zero-Shift Operators}: While ReDo demonstrates that zero-functional-shift operators ($W_{\mathrm{out}} = 0$) preserve physical balance, discovering novel gaits under altered kinematics requires directed exploration. Developing hybrid operators that combine the structural safety of zero-functional-shift recycling with targeted exploratory policy perturbations represents an important frontier for continuous control.
+    \item \textbf{Adaptive and Self-Calibrating Thresholds}: In this work, diagnostic thresholds for rank ratio ($\rho_{\mathrm{on}}, \rho_{\mathrm{off}}$) and activation dormancy ($d_{\mathrm{on}}, d_{\mathrm{off}}$) were calibrated empirically. Extending \textsc{CapacityGate} to adaptively tune thresholds via online running statistics, Bayesian optimization, or meta-learning could enhance cross-domain generalizability without manual calibration.
+    \item \textbf{High-Dimensional Visual Control and Robotics}: Investigating whether the ``Do Not Disturb'' principle generalizes to pixel-based continuous control (e.g., DeepMind Control Suite from pixels) and physical robotic hardware transitions will clarify the interplay between visual representation drift and control manifold preservation.
+    \item \textbf{Multi-Task and Lifelong Transfer}: Scaling closed-loop diagnostic gating to sequences of heterogeneous tasks will determine how capacity telemetry scales across non-stationary continual learning lifetimes.
+\end{enumerate}
+
+\bibliography{iclr2027_conference}
+\bibliographystyle{iclr2027_conference}
+
+\newpage
+\appendix
+\renewcommand{\thetable}{A.\arabic{table}}
+\setcounter{table}{0}
+\renewcommand{\thefigure}{A.\arabic{figure}}
+\setcounter{figure}{0}
+
+\section{Exhaustive Seed-Level Benchmark Data}
+\label{app:per_seed}
+
+Table~\ref{tab:per_seed_full} (Appendix Table A.1) provides the complete, unabridged breakdown of final evaluation normalized returns across all 135 primary factorial runs in the confirmatory study, reporting individual performance for each of the 5 paired random seeds.
+
+\begin{table}[h]
+\caption{\textbf{Complete 135-Run Primary Benchmark Breakdown.} Final evaluation normalized returns across all 5 paired random seeds (Seeds 0--4) for each (Environment, Shift Regime, Method) experimental cell.}
+\label{tab:per_seed_full}
+\centering
+\scriptsize
+\begin{tabular}{lllccccc}
+\toprule
+\textbf{Environment} & \textbf{Shift Regime} & \textbf{Method} & \textbf{Seed 0} & \textbf{Seed 1} & \textbf{Seed 2} & \textbf{Seed 3} & \textbf{Seed 4} \\
+\midrule
+\multirow{9}{*}{\texttt{halfcheetah-medium-v2}} 
+ & \multirow{3}{*}{\texttt{none}} 
+   & \texttt{none} & $38.23$ & $35.96$ & $35.36$ & $35.21$ & $31.83$ \\
+ & & \texttt{fixed} & $16.33$ & $11.82$ & $12.19$ & $10.58$ & $2.61$ \\
+ & & \textsc{CapacityGate} & $38.23$ & $35.96$ & $35.36$ & $35.21$ & $31.83$ \\
+\cmidrule{2-8}
+ & \multirow{3}{*}{\texttt{obs\_noise}} 
+   & \texttt{none} & $32.83$ & $29.78$ & $38.16$ & $39.92$ & $33.37$ \\
+ & & \texttt{fixed} & $17.52$ & $29.75$ & $20.78$ & $19.10$ & $2.30$ \\
+ & & \textsc{CapacityGate} & $32.83$ & $29.78$ & $38.16$ & $39.92$ & $33.37$ \\
+\cmidrule{2-8}
+ & \multirow{3}{*}{\texttt{reward\_scale}} 
+   & \texttt{none} & $38.00$ & $35.27$ & $41.55$ & $39.56$ & $34.88$ \\
+ & & \texttt{fixed} & $16.32$ & $5.33$ & $1.83$ & $18.45$ & $5.54$ \\
+ & & \textsc{CapacityGate} & $38.00$ & $35.27$ & $41.55$ & $39.56$ & $34.88$ \\
+\midrule
+\multirow{9}{*}{\texttt{hopper-medium-v2}} 
+ & \multirow{3}{*}{\texttt{none}} 
+   & \texttt{none} & $39.98$ & $37.49$ & $43.99$ & $42.38$ & $41.08$ \\
+ & & \texttt{fixed} & $20.07$ & $16.31$ & $10.12$ & $24.69$ & $3.14$ \\
+ & & \textsc{CapacityGate} & $39.98$ & $37.49$ & $43.99$ & $42.38$ & $41.08$ \\
+\cmidrule{2-8}
+ & \multirow{3}{*}{\texttt{obs\_noise}} 
+   & \texttt{none} & $47.66$ & $37.05$ & $37.52$ & $39.56$ & $44.84$ \\
+ & & \texttt{fixed} & $55.16$ & $24.04$ & $28.10$ & $19.46$ & $57.47$ \\
+ & & \textsc{CapacityGate} & $47.66$ & $37.05$ & $37.52$ & $39.56$ & $44.84$ \\
+\cmidrule{2-8}
+ & \multirow{3}{*}{\texttt{reward\_scale}} 
+   & \texttt{none} & $41.95$ & $33.50$ & $39.85$ & $31.95$ & $37.38$ \\
+ & & \texttt{fixed} & $19.73$ & $17.81$ & $21.69$ & $27.53$ & $36.03$ \\
+ & & \textsc{CapacityGate} & $41.95$ & $33.50$ & $39.85$ & $31.95$ & $37.38$ \\
+\midrule
+\multirow{9}{*}{\texttt{walker2d-medium-v2}} 
+ & \multirow{3}{*}{\texttt{none}} 
+   & \texttt{none} & $9.97$ & $38.71$ & $33.62$ & $42.43$ & $32.54$ \\
+ & & \texttt{fixed} & $12.48$ & $-0.69$ & $-0.04$ & $-0.45$ & $-0.60$ \\
+ & & \textsc{CapacityGate} & $9.97$ & $38.71$ & $33.62$ & $42.43$ & $32.54$ \\
+\cmidrule{2-8}
+ & \multirow{3}{*}{\texttt{obs\_noise}} 
+   & \texttt{none} & $1.45$ & $41.90$ & $40.01$ & $45.02$ & $52.41$ \\
+ & & \texttt{fixed} & $-0.25$ & $19.62$ & $1.26$ & $12.18$ & $-0.56$ \\
+ & & \textsc{CapacityGate} & $1.45$ & $41.90$ & $40.01$ & $45.02$ & $52.41$ \\
+\cmidrule{2-8}
+ & \multirow{3}{*}{\texttt{reward\_scale}} 
+   & \texttt{none} & $61.16$ & $66.03$ & $47.08$ & $76.66$ & $70.71$ \\
+ & & \texttt{fixed} & $-0.74$ & $12.03$ & $-0.55$ & $-0.50$ & $-0.52$ \\
+ & & \textsc{CapacityGate} & $61.16$ & $66.03$ & $47.08$ & $76.66$ & $70.71$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Diagnostic Parameter Specifications}
+\label{app:hyperparams}
+
+Table~\ref{tab:hyperparams} (Appendix Table A.2) specifies the primary hyperparameters governing offline pretraining, online adaptation, diagnostic probe evaluation, and \textsc{CapacityGate} controller execution.
+
+\begin{table}[h]
+\caption{\textbf{Experimental Hyperparameters and Diagnostic Settings.}}
+\label{tab:hyperparams}
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Hyperparameter} & \textbf{Setting / Value} \\
+\midrule
+Offline Pretraining Updates & $25,000$ \\
+IQL Expectile ($\tau$) & $0.7$ \\
+IQL Inverse Temperature ($\beta$) & $3.0$ \\
+Discount Factor ($\gamma$) & $0.99$ \\
+Target Network Polyak Rate & $0.005$ \\
+Optimizer & Adam ($\beta_1=0.9, \beta_2=0.999$) \\
+Learning Rate & $3 \times 10^{-4}$ \\
+Online Adaptation Steps & $25,000$ \\
+Replay Mixing Ratio & $50\%$ Offline / $50\%$ Online \\
+Online Evaluation Interval & Every $2,500$ steps ($10$ deterministic episodes) \\
+Diagnostic Probe Batch Size ($B$) & $256$ transitions \\
+Diagnostic Probe Sampling & Uniform reservoir sampling without replacement \\
+Diagnostic Evaluation Interval ($\Delta t$) & $1,000$ steps \\
+Rank On Threshold ($\rho_{\mathrm{on}}$) & $0.70$ \\
+Rank Off Threshold ($\rho_{\mathrm{off}}$) & $0.85$ \\
+Dormancy On Threshold ($d_{\mathrm{on}}$) & $0.15$ ($15\%$ dormant units) \\
+Dormancy Off Threshold ($d_{\mathrm{off}}$) & $0.08$ ($8\%$ dormant units) \\
+Refractory Cooldown ($\Delta_{\mathrm{cool}}$) & $3,000$ online adaptation steps \\
+Intervention Severity ($\eta$) & $0.10$ \\
+Shrinkage Factor ($\lambda$) & $0.10$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

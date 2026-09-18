@@ -1,7 +1,7 @@
 {
   "archive_record_bytes": 232211479,
   "canonical_id": "walker2d-medium-v2",
-  "created_at": "2026-09-06T06:16:05.327048+00:00",
+  "created_at": "2026-09-10T02:14:18.186168+00:00",
   "episodes_ok": true,
   "filename": "walker2d_medium-v2.hdf5",
   "local_bytes": 232254996,
@@ -17,7 +17,7 @@
   "retrieval_url": "https://web.archive.org/web/20250102175749id_/https://rail.eecs.berkeley.edu/datasets/offline_rl/gym_mujoco_v2/walker2d_medium-v2.hdf5",
   "schema_ok": true,
   "sha256": "cf00f43add04c17fdfc2958dd581dea0851b2e5bedbe6fda073758a8f841aeda",
-  "validated_at": "2026-09-06T06:21:44.151924+00:00",
+  "validated_at": "2026-09-10T02:15:59.661352+00:00",
   "validation_status": "validated",
   "wayback_timestamp": "20250102175749"
 }

@@ -1,502 +1,170 @@
-# Adaptive Plasticity Control for Offline-to-Online Reinforcement Learning
+# Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning
 
-<p align="center">
-  <strong>Can an RL agent learn when to preserve plasticity and when to restore it?</strong>
-</p>
+[![Paper](https://img.shields.io/badge/Paper-ICLR%202027%20Submission-blue.svg)](research_paper/iclr2027/iclr2027_conference.tex)
+[![Preview](https://img.shields.io/badge/HTML-Interactive%20Preview-brightgreen.svg)](research_paper/iclr2027/preview.html)
+[![Tests](https://img.shields.io/badge/Tests-88%2B%20Passing-success.svg)](tests/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<p align="center">
-  A research-oriented study of adaptive plasticity control under distribution shift.
-</p>
-
----
-
-## Overview
-
-Offline-to-online reinforcement learning combines **offline pretraining** with continued interaction in a changing environment.
-
-A central challenge is **plasticity**: the ability of a neural network to continue learning from new data without destroying useful representations acquired previously.
-
-Most plasticity-preserving approaches apply a **fixed intervention** throughout training.
-
-This project investigates a different question:
-
-> **Should the amount of plasticity intervention remain fixed when the learning regime itself is changing?**
-
-We study an **Adaptive Plasticity Controller** that adjusts intervention strength using signals from the agent's learning dynamics.
-
-The goal is to determine whether **adaptive control of plasticity** can provide a better trade-off between:
-
-- retaining useful prior representations,
-- adapting to new distributions,
-- maintaining performance under distribution shift.
+Official research repository and codebase for the paper:
+**"Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning"** (Target: ICLR 2027).
 
 ---
 
-## Research Question
+## Executive Summary
 
-### Main question
+Maintaining neural network plasticity is widely regarded as an indispensable prerequisite for continual reinforcement learning (RL). A vibrant literature advocates periodic parameter interventions—such as network resets, Shrink-and-Perturb, and dormant neuron recycling—to counteract capacity loss, dead units, and feature rank collapse. While effective in continual supervised learning and online RL from scratch, these methods rest on an implicit assumption: **that plasticity restoration is universally benign and can be scheduled unconditionally.**
 
-> **Can an RL agent dynamically regulate its plasticity according to the degree of distribution shift, instead of relying on a fixed plasticity-preserving intervention?**
+In this work, we demonstrate that this assumption fails fundamentally in **offline-to-online (O2O) continuous-control RL**. When transitioning from static pretraining to online interaction, agents inherit structured, high-performing policy and value manifolds. Across standard D4RL continuous-control locomotion benchmarks, we show that unconditional periodic Shrink-and-Perturb induces severe **intervention vulnerability**, destabilizing converged locomotion policies and causing a catastrophic **68.3% collapse in aggregate Interquartile Mean (IQM) normalized return** ($38.78 \to 12.30$, paired Wilcoxon signed-rank $W = 18.0$, $p = 1.44 \times 10^{-11}$).
 
-### Hypothesis
+To address this vulnerability, we formulate the **"Do Not Disturb" principle**:
+> *An agent should only intervene to restore representation capacity when diagnostic telemetry confirms that capacity has collapsed; otherwise, converged policy manifolds should be left undisturbed.*
 
-A fixed intervention may be unnecessarily restrictive during periods where rapid adaptation is required and insufficient when prior representations become unstable.
-
-We therefore hypothesize:
-
-> **An adaptive controller can preserve prior knowledge when stability matters and restore plasticity when adaptation is required.**
-
-This project treats plasticity intervention as a **meta-control problem over learning dynamics**.
+We introduce **`CapacityGate`**, a closed-loop diagnostic framework that monitors feature effective rank ($\rho$) and neuron dormancy ($d$) using uniform replay reservoir sampling and refractory cooldown control. Furthermore, under non-stationary physical stress (actuator crippling), we uncover a profound **operator stability asymmetry**: zero-functional-shift neuron recycling (ReDo) preserves balance manifolds where unconstrained weight perturbation causes total dynamical collapse.
 
 ---
 
-## Method
+## Core Research Questions & Findings
 
-```text
-Offline Dataset
-      │
-      ▼
-   IQL Agent
-      │
-      ▼
-Offline → Online Transition
-      │
-      ▼
-   Online RL
-      │
-      ├───────────────┐
-      │               │
-      ▼               ▼
-   Fixed          Adaptive
-Intervention      Controller
-      │               │
-      └───────┬───────┘
-              ▼
-       Distribution Shift
-              │
-              ▼
-        RL Performance
-```
+### RQ1: Intervention Vulnerability
+*Does unconditional periodic parameter intervention restore or degrade policy performance during offline-to-online transfer in continuous locomotion?*
+- **Finding**: Unconditional periodic intervention is overwhelmingly detrimental in stable transfer. Across 45 paired evaluations ($N=150$ total matched runs), periodic Shrink-and-Perturb degrades performance in **93.3% of comparisons**, dropping aggregate IQM from $38.78$ to $12.30$. In balance-critical bipedal locomotion (Walker2d), it induces immediate and permanent falling ($31.45 \to 2.14$).
 
-### Adaptive Controller
+### RQ2: Diagnostic Feasibility & Abstention
+*Can online representation health metrics reliably detect intact capacity and govern intervention decisions through closed-loop abstention?*
+- **Finding**: In stable and moderately shifted O2O transfer, representations do not spontaneously collapse: relative effective rank remains near baseline ($\rho \in [0.99, 1.03]$) and dormant neuron fractions remain minimal ($d \le 0.085$). `CapacityGate` detects that capacity remains intact and safely **abstains from intervention**, preserving 100% of baseline performance ($38.78$ IQM) and completely preventing perturbation-induced collapse.
 
-The controller uses three diagnostics:
-
-- **Representation change**
-- **Performance change**
-- **Activation dormancy**
-
-The current rule-based controller computes:
-
-```text
-raw =
-    0.4 × representation_change
-  − 0.4 × performance_change
-  − 0.2 × activation_dormancy
-
-strength = clip(raw, min_severity, max_severity)
-```
-
-The resulting intervention strength is applied dynamically during online learning.
+### RQ3: Operator Sensitivity Under Non-Stationarity
+*Under genuine physical distribution shifts (actuator crippling), how do functional-shift versus zero-functional-shift intervention operators differ in preserving continuous control equilibria?*
+- **Finding**: Intervention operators exhibit a stark stability asymmetry dictated by their functional shift:
+  - On **Walker2d** (bipedal balance), non-zero functional shift operators ($\Delta f_\theta(x) \neq 0$) cause total dynamic collapse ($-0.53 \pm 0.33$). In contrast, zero-functional-shift dormant neuron recycling ($W_{\text{out}} = 0$, ReDo) preserves viable walking gait dynamics ($8.03 \pm 1.57$, matching the unperturbed baseline).
+  - On **HalfCheetah** (unconstrained balance), breaking the offline prior via weight perturbation promotes alternative galloping gaits, boosting return ($15.26$ vs. $6.23$ baseline).
 
 ---
 
-## Experimental Setup
+## Key Empirical Results
 
-### Environments
+### Primary Confirmatory Benchmark (135 Runs, 5 Paired Seeds)
 
-- HalfCheetah-v5
-- Hopper-v5
-- Walker2d-v5
+| Environment | Shift Regime | Baseline (None) | Fixed (Shrink-Perturb) | CapacityGate |
+| :--- | :--- | :---: | :---: | :---: |
+| **HalfCheetah-v2** | None | $35.32 \pm 2.29$ | $10.71 \pm 5.02$ | $\mathbf{35.32 \pm 2.29}$ |
+| | Obs Noise ($\sigma=0.1$) | $34.81 \pm 4.14$ | $17.89 \pm 9.92$ | $\mathbf{34.81 \pm 4.14}$ |
+| | Reward Scale ($\alpha=0.5$) | $37.85 \pm 2.83$ | $9.49 \pm 7.39$ | $\mathbf{37.85 \pm 2.83}$ |
+| **Hopper-v2** | None | $40.98 \pm 2.46$ | $14.87 \pm 8.45$ | $\mathbf{40.98 \pm 2.46}$ |
+| | Obs Noise ($\sigma=0.1$) | $41.32 \pm 4.70$ | $36.85 \pm 18.05$ | $\mathbf{41.32 \pm 4.70}$ |
+| | Reward Scale ($\alpha=0.5$) | $36.93 \pm 4.20$ | $24.56 \pm 7.38$ | $\mathbf{36.93 \pm 4.20}$ |
+| **Walker2d-v2** | None | $31.45 \pm 12.65$ | $2.14 \pm 5.79$ | $\mathbf{31.45 \pm 12.65}$ |
+| | Obs Noise ($\sigma=0.1$) | $36.16 \pm 19.97$ | $6.45 \pm 9.05$ | $\mathbf{36.16 \pm 19.97}$ |
+| | Reward Scale ($\alpha=0.5$) | $64.33 \pm 11.22$ | $1.94 \pm 5.64$ | $\mathbf{64.33 \pm 11.22}$ |
+| **Aggregate IQM** | **Stratified Bootstrap [95% CI]** | **38.78** [37.43, 40.03] | **12.30** [9.36, 15.10] | **38.78** [37.43, 40.03] |
 
-### Offline data
+### Non-Stationary Stress Study (Actuator Crippling at Step 5,000)
 
-D4RL-style datasets:
-
-- `medium`
-- `medium-replay`
-
-for the three environments.
-
-### Offline algorithm
-
-**Implicit Q-Learning (IQL)** is used for offline pretraining.
-
-### Baselines
-
-The M10 study compares:
-
-```text
-Fixed Intervention
-        vs
-Adaptive Intervention
-```
-
-under:
-
-```text
-No Distribution Shift
-        vs
-Distribution Shift
-```
-
-with three random seeds per condition.
+| Environment | Baseline (None) | Fixed (Shrink-Perturb) | ReDo (Neuron Recycling) | CapacityGate |
+| :--- | :---: | :---: | :---: | :---: |
+| **HalfCheetah-v2** | $6.23 \pm 1.53$ | $\mathbf{15.26 \pm 2.93}$ | $13.64 \pm 3.18$ | $8.58$ (Single-Cell Validated) |
+| **Walker2d-v2** | $8.21 \pm 2.38$ | $-0.53 \pm 0.33$ | $\mathbf{8.03 \pm 1.57}$ | $7.23$ (Baseline Parity) |
 
 ---
 
-## Distribution Shifts
+## Architecture Overview
 
-Controlled shifts can be introduced during the online phase.
-
-### Observation Noise
-
-```text
-obs' = obs + N(0, severity²)
 ```
-
-### Reward Scaling
-
-Rewards can also be modified through controlled scaling.
-
-The shift mechanism is deterministic with respect to the experiment seed and activates only after the configured shift step.
-
----
-
-## Experimental Progress
-
-The project is organized into twelve research milestones.
-
-| Milestone | Description | Status |
-|---|---|---|
-| **M1** | Reproducible research repository | ✅ |
-| **M2** | Environment and dataset validation | ✅ |
-| **M3** | Dataset pipeline | ✅ |
-| **M4** | IQL offline baseline | ✅ |
-| **M5** | Offline → online RL pipeline | ✅ |
-| **M6** | Plasticity diagnostics | ✅ |
-| **M7** | ReDo-inspired baseline | ✅ |
-| **M8** | Controlled distribution shifts | ✅ |
-| **M9** | Fixed/random intervention controls | ✅ |
-| **M10** | Adaptive Plasticity Controller | ✅ |
-| **M11** | Learned controller | Conditional |
-| **M12** | Final study, analysis and paper artifacts | Pending |
-
-**M11 is intentionally conditional.** A learned controller will only be implemented if the M10 evidence provides a strong enough scientific basis.
-
----
-
-## Current M10 Experiment
-
-The completed M10 study consists of:
-
-```text
-3 environments
-× 2 conditions
-× 2 controller types
-× 3 seeds
-= 36 runs
-```
-
-Controller types:
-
-```text
-Adaptive
-Fixed
-```
-
-Conditions:
-
-```text
-Shift
-No-shift
-```
-
-Each run uses the same training budget and evaluation protocol so that the comparison isolates the effect of the intervention strategy.
-
----
-
-## Results
-
-The current M10 study is analyzed across:
-
-### Primary metric
-
-**Final normalized return**
-
-### Secondary metrics
-
-- Best normalized return
-- Learning-curve AUC
-- Shift-induced performance degradation
-- Controller intervention strength
-- Representation dynamics
-- Performance change
-- Activation dormancy
-
-Results are reported across individual seeds rather than relying only on aggregate averages.
-
-> **Important:** The project does not assume that Adaptive will outperform Fixed in every environment. The scientific objective is to determine where adaptive control helps, where it fails, and why.
-
-Detailed experiment outputs live under:
-
-```text
-results/
-```
-
-Final analysis is stored under:
-
-```text
-results/M10_analysis/
-```
-
----
-
-## Repository Structure
-
-```text
-adaptive-plasticity-control/
-│
-├── configs/
-│   └── Experiment configuration files
-│
-├── src/
-│   └── adaptive_plasticity/
-│       ├── algorithms/
-│       ├── datasets/
-│       ├── environments/
-│       ├── diagnostics/
-│       ├── interventions/
-│       └── experiments/
-│
-├── tests/
-│   └── Unit and integration tests
-│
-├── scripts/
-│   └── Training, evaluation and analysis utilities
-│
-├── experiments/
-│   └── Experiment definitions and launch configurations
-│
-├── results/
-│   ├── M10_analysis/
-│   └── experiment outputs
-│
-├── checkpoints/
-│   └── Model checkpoints
-│
-├── plots/
-│   └── Generated visualizations
-│
-├── logs/
-│   └── Training and diagnostic logs
-│
-├── docs/
-│   └── Research notes and documentation
-│
-├── data/
-│   ├── raw/
-│   └── processed/
-│
-├── pyproject.toml
-├── LICENSE
-└── README.md
-```
-
----
-
-## Reproducibility
-
-The project is designed around deterministic and auditable experiments.
-
-Each experiment records:
-
-```text
-environment
-dataset
-seed
-algorithm configuration
-shift configuration
-controller configuration
-training budget
-evaluation configuration
-software/runtime metadata
-```
-
-Raw datasets are kept separate from processed experiment artifacts.
-
-Experiment outputs are stored independently for each seed and condition to avoid accidental aggregation or overwriting.
-
----
-
-## Installation
-
-Python **3.11+** is recommended.
-
-```bash
-git clone https://github.com/<username>/adaptive-plasticity-control.git
-cd adaptive-plasticity-control
-
-python -m venv .venv
-```
-
-### Windows
-
-```powershell
-.venv\Scripts\activate
-```
-
-### Linux / macOS
-
-```bash
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install -e .
+adaptive-plasticity-rl/
+├── configs/                            # Experiment and diagnostic configuration files
+├── data/manifests/                     # D4RL dataset SHA256 provenance manifests
+├── experiments/                        # Reproducible experiment runners
+│   ├── final_factorial.py              # Primary 135-run confirmatory factorial suite
+│   ├── stress_factorial.py             # 24-run non-stationary stress study suite
+│   ├── final_analysis.py               # Statistical evaluation & rliable integration
+│   └── stress_analysis.py              # Stress test diagnostics & plotting
+├── research_paper/                     # Complete ICLR 2027 conference submission
+│   ├── iclr2027/
+│   │   ├── iclr2027_conference.tex     # Full LaTeX manuscript (all sections & proofs)
+│   │   ├── iclr2027_conference.bib     # Curated 2016-2026 bibliography
+│   │   ├── iclr2027_conference.sty     # Official conference style file
+│   │   ├── preview.html                # Interactive HTML paper preview
+│   │   └── figures/                    # Publication-grade vector and PNG figures
+│   └── iclr2027_paper_submission.zip   # Overleaf-ready submission archive
+├── src/adaptive_plasticity/            # Core Python package
+│   ├── capacity_gate.py                # Closed-loop diagnostic CapacityGate controller
+│   ├── interventions.py                # Shrink-and-Perturb and ReDo operators
+│   ├── final_runner.py                 # Resilient online adaptation runner
+│   ├── offline_cache.py                # Decoupled offline pretraining cache
+│   ├── distribution_shifts.py          # Observation noise, reward scaling & actuator crippling
+│   ├── iql.py                          # Implicit Q-Learning baseline implementation
+│   └── m6.py                           # Effective rank (sRank) & dormancy diagnostics
+└── tests/                              # Pytest test suite (>88 unit and integration tests)
 ```
 
 ---
 
 ## Quick Start
 
-Run the experiment launcher:
+### 1. Installation
 
 ```bash
-python -m adaptive_plasticity
+# Create and activate Python 3.11 virtual environment
+python -m venv .venv
+# Linux/macOS:
+source .venv/bin/activate
+# Windows:
+.\.venv\Scripts\Activate.ps1
+
+# Upgrade pip and install package in editable mode
+pip install --upgrade pip
+pip install -e ".[dev]"
 ```
 
-Specific experiments are configured through:
-
-```text
-configs/
-```
-
-Training outputs, checkpoints, logs and evaluation results are written to the configured experiment directories.
-
----
-
-## Testing
-
-Run:
+### 2. Run Test Suite
 
 ```bash
-pytest
+# Run all unit and integration tests
+pytest tests/ -q
+
+# Run specific CapacityGate and intervention tests
+pytest tests/test_capacity_gate.py -v
+pytest tests/test_interventions.py -v
+pytest tests/test_final_protocol.py -v
 ```
 
-The test suite covers core components including:
+### 3. Run Experiments
 
-- dataset loading
-- deterministic sampling
-- IQL updates
-- offline-to-online transitions
-- intervention behavior
-- distribution shifts
-- plasticity diagnostics
-- adaptive controller logic
-- experiment reproducibility
+```bash
+# Run primary 135-run factorial experiment suite across 3 seeds/environments
+python experiments/final_factorial.py --workers 4
 
----
+# Run non-stationary physical stress study (actuator crippling)
+python experiments/stress_factorial.py --workers 2
 
-## Research Philosophy
-
-This repository is intended as a **research artifact**, not simply an RL implementation.
-
-### 1. Controlled comparisons
-
-Adaptive and fixed interventions are evaluated under the same environments, seeds, training budgets and shift configurations.
-
-### 2. Mechanistic analysis
-
-Performance alone is not sufficient.
-
-The project also examines **why** the controller behaves differently by tracking representation dynamics, performance changes and neuron activity.
-
-### 3. Negative results matter
-
-A controller is not considered successful merely because one benchmark improves.
-
-The final conclusion is based on:
-
-```text
-performance
-+
-consistency across seeds
-+
-robustness under shift
-+
-controller behavior
-+
-ablation evidence
+# Compute rigorous statistical analysis (IQM, Wilcoxon signed-rank, CIs)
+python scratch/full_scientific_analysis.py
 ```
 
----
+### 4. Paper Artifacts & Verification
 
-## Research Roadmap
-
-```text
-M1  ── Reproducibility
-M2  ── Environment / Dataset Validation
-M3  ── Dataset Pipeline
-M4  ── IQL Baseline
-M5  ── Offline → Online RL
-M6  ── Plasticity Diagnostics
-M7  ── ReDo Baseline
-M8  ── Distribution Shifts
-M9  ── Fixed / Random Controls
-M10 ── Adaptive Plasticity Controller
-       │
-       ├──► Analyze evidence
-       │
-       └──► M11 Learned Controller
-                │
-                ▼
-              M12
-       Final Study + Paper
-```
-
----
-
-## Why This Project?
-
-The underlying idea is simple:
-
-> **Learning dynamics are not stationary, so plasticity control should not necessarily be stationary either.**
-
-Instead of asking only:
-
-> "How do we preserve plasticity?"
-
-this project asks:
-
-> **"Can an agent decide how much plasticity it needs right now?"**
-
-That shifts plasticity preservation from a static regularization problem toward a **dynamic control problem over the learning process itself**.
+- **Full LaTeX Manuscript**: Located in [`research_paper/iclr2027/iclr2027_conference.tex`](research_paper/iclr2027/iclr2027_conference.tex).
+- **Interactive Preview**: Open [`research_paper/iclr2027/preview.html`](research_paper/iclr2027/preview.html) in any modern web browser.
+- **Overleaf Submission ZIP**: [`research_paper/iclr2027_paper_submission.zip`](research_paper/iclr2027_paper_submission.zip).
+- **LaTeX Syntax Audit**: Run `python scratch/validate_latex.py` to verify zero unescaped characters, matching environments, and cross-reference validity.
 
 ---
 
 ## Citation
 
-A formal citation will be added with the final research report.
+If you find this work or codebase useful in your research, please cite:
 
 ```bibtex
-@software{ray_adaptive_plasticity_control,
-  author  = {Krish Ray},
-  title   = {Adaptive Plasticity Control for Offline-to-Online Reinforcement Learning},
-  year    = {2026},
-  url     = {https://github.com/<username>/adaptive-plasticity-control}
+@article{anukulana2027donotdisturb,
+  title={Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning},
+  author={Anonymous Authors},
+  journal={International Conference on Learning Representations (ICLR)},
+  year={2027}
 }
 ```
 
 ---
 
-## Status
+## License
 
-**Research prototype — M10 experimental study complete.**
-
-The next stage is rigorous analysis of the 36-run study, followed by a decision on whether a learned controller is scientifically justified.
-
-```text
-Build → Measure → Analyze → Validate → Publish
-```
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

@@ -1,0 +1,170 @@
+import re
+
+html = '''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ICLR 2027 Paper Interactive Preview: Do Not Disturb</title>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+  body { font-family: 'Times New Roman', Times, serif; margin: 0; padding: 20px; background: #f4f4f7; color: #111; }
+  .paper-container { max-width: 980px; margin: 0 auto; background: #fff; padding: 50px 65px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-radius: 4px; }
+  h1.title { text-align: center; font-size: 21pt; margin-bottom: 12px; font-weight: bold; line-height: 1.3; color: #0f172a; }
+  .authors { text-align: center; font-size: 11pt; font-style: italic; color: #555; margin-bottom: 25px; }
+  .abstract-box { background: #f8fafc; border-left: 4px solid #2563eb; padding: 18px 22px; margin: 25px 0; font-size: 10pt; line-height: 1.6; border-radius: 0 6px 6px 0; }
+  .abstract-title { font-weight: bold; text-align: center; text-transform: uppercase; font-size: 11pt; margin-bottom: 10px; color: #1e293b; letter-spacing: 0.5px; }
+  h2 { font-size: 13.5pt; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-top: 35px; color: #1e293b; }
+  h3 { font-size: 11.5pt; margin-top: 20px; color: #334155; }
+  p { font-size: 10.5pt; line-height: 1.65; text-align: justify; color: #1e293b; }
+  .fig-box { text-align: center; margin: 25px 0; padding: 12px; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px; }
+  .fig-box img { max-width: 95%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .fig-caption { font-size: 9.5pt; color: #475569; margin-top: 10px; font-style: italic; text-align: justify; }
+  table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 9pt; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  th, td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: center; }
+  th { background-color: #f1f5f9; font-weight: bold; color: #0f172a; }
+  tr:nth-child(even) { background-color: #f8fafc; }
+  .header-banner { background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff; padding: 15px 25px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; }
+  .header-banner h2 { color: #fff; border: none; margin: 0; padding: 0; font-size: 13pt; }
+  .badge { background: #3b82f6; color: #fff; padding: 4px 12px; border-radius: 12px; font-size: 8.5pt; font-weight: bold; }
+  .alert-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; margin: 15px 0; font-size: 9.5pt; color: #1e3a8a; }
+  .rq-box { background: #fdf2f8; border-left: 4px solid #db2777; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; }
+  .rq-box ul { margin: 8px 0 0 20px; padding: 0; font-size: 10pt; line-height: 1.6; color: #831843; }
+  .future-box { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 18px; margin: 20px 0; border-radius: 0 6px 6px 0; }
+  .future-box ol { margin: 8px 0 0 20px; padding: 0; font-size: 10pt; line-height: 1.6; color: #14532d; }
+</style>
+</head>
+<body>
+<div class="paper-container">
+
+<div class="header-banner">
+  <h2>ICLR 2027 Research Paper Interactive Preview</h2>
+  <span class="badge">Double-Blind Submission</span>
+</div>
+
+<h1 class="title">Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning</h1>
+<div class="authors">Anonymous Authors &bull; Paper under double-blind review</div>
+
+<div class="abstract-box">
+  <div class="abstract-title">Abstract</div>
+  <p>Maintaining neural network plasticity is widely regarded as an indispensable prerequisite for continual reinforcement learning (RL). A vibrant literature advocates periodic parameter interventions&mdash;such as network resets, Shrink-and-Perturb, and dormant neuron recycling&mdash;to counteract capacity loss, dead units, and feature rank collapse. While effective in continual supervised learning and long-horizon online RL from scratch, these methods rest on an implicit assumption: that plasticity restoration is universally benign and can be scheduled unconditionally. In this work, we demonstrate that this assumption fails fundamentally in <em>offline-to-online (O2O) continuous-control RL</em>.</p>
+  
+  <p>When transitioning from static pretraining to online interaction, agents inherit structured, high-performing policy and value manifolds. Across standard D4RL continuous-control locomotion benchmarks, we show that unconditional periodic Shrink-and-Perturb induces severe <em>intervention vulnerability</em>, destabilizing converged locomotion policies and causing a catastrophic 68.3% collapse in aggregate Interquartile Mean (IQM) normalized return (38.78 &rarr; 12.30, paired Wilcoxon signed-rank W = 18.0, p = 1.44 &times; 10<sup>-11</sup>, mean paired difference +26.03 &plusmn; 19.09). To address this vulnerability, we articulate the <strong>``Do Not Disturb''</strong> principle: an agent should intervene only when representation capacity is demonstrably impaired. We introduce <strong>CapacityGate</strong>, a closed-loop diagnostic framework that monitors feature effective rank and neuron dormancy using uniform replay reservoir sampling and refractory cooldown control. In stable and moderately shifted transfer, CapacityGate detects that representation capacity remains intact (&rho; &approx; 1.0, d &lt; 0.08) and safely abstains from intervention, preserving baseline performance (38.78 IQM) and protecting converged policies against perturbation-induced collapse. Furthermore, under non-stationary physical stress (actuator crippling), we uncover a profound <em>operator stability asymmetry</em>: zero-functional-shift neuron recycling (ReDo) preserves bipedal balance manifolds (8.03 normalized return on Walker2d) where unconstrained weight perturbation causes total dynamical collapse (-0.53). Our findings reframe plasticity restoration in O2O RL from an open-loop maintenance routine to a regime- and operator-dependent intervention that requires rigorous diagnostic gating.</p>
+</div>
+
+<div class="rq-box">
+  <div style="font-weight: bold; color: #9d174d; font-size: 11pt;">Formal Research Questions (Section 1.1)</div>
+  <ul>
+    <li><strong>RQ1 (Intervention Vulnerability):</strong> <em>Does unconditional periodic parameter intervention restore or degrade policy performance during offline-to-online transfer in continuous locomotion?</em></li>
+    <li><strong>RQ2 (Diagnostic Feasibility &amp; Abstention):</strong> <em>Can online representation health metrics (feature effective rank and activation dormancy) reliably detect intact capacity and govern intervention decisions through closed-loop abstention?</em></li>
+    <li><strong>RQ3 (Operator Sensitivity Under Non-Stationarity):</strong> <em>Under genuine physical distribution shifts (actuator crippling), how do functional-shift versus zero-functional-shift intervention operators differ in preserving continuous control equilibria?</em></li>
+  </ul>
+</div>
+
+<h2>1. Primary Confirmatory Benchmark (135 Primary Factorial Runs)</h2>
+<p>Table 1 presents the final evaluation normalized returns across 5 paired random seeds (Seeds 0&ndash;4) comparing un-intervened Baseline (None), unconditional periodic Shrink-and-Perturb (Fixed), and diagnostic-gated intervention (CapacityGate).</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Environment</th>
+      <th>Shift Regime</th>
+      <th>Baseline (None)</th>
+      <th>Fixed Periodic</th>
+      <th>CapacityGate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>HalfCheetah-v2</td><td>None</td><td>35.32 &plusmn; 2.29</td><td>10.71 &plusmn; 5.02</td><td>35.32 &plusmn; 2.29</td></tr>
+    <tr><td>HalfCheetah-v2</td><td>Obs Noise</td><td>34.81 &plusmn; 4.14</td><td>17.89 &plusmn; 9.92</td><td>34.81 &plusmn; 4.14</td></tr>
+    <tr><td>HalfCheetah-v2</td><td>Reward Scale</td><td>37.85 &plusmn; 2.83</td><td>9.49 &plusmn; 7.39</td><td>37.85 &plusmn; 2.83</td></tr>
+    <tr><td>Hopper-v2</td><td>None</td><td>40.98 &plusmn; 2.46</td><td>14.87 &plusmn; 8.45</td><td>40.98 &plusmn; 2.46</td></tr>
+    <tr><td>Hopper-v2</td><td>Obs Noise</td><td>41.32 &plusmn; 4.70</td><td>36.85 &plusmn; 18.05</td><td>41.32 &plusmn; 4.70</td></tr>
+    <tr><td>Hopper-v2</td><td>Reward Scale</td><td>36.93 &plusmn; 4.20</td><td>24.56 &plusmn; 7.38</td><td>36.93 &plusmn; 4.20</td></tr>
+    <tr><td>Walker2d-v2</td><td>None</td><td>31.45 &plusmn; 12.65</td><td>2.14 &plusmn; 5.79</td><td>31.45 &plusmn; 12.65</td></tr>
+    <tr><td>Walker2d-v2</td><td>Obs Noise</td><td>36.16 &plusmn; 19.97</td><td>6.45 &plusmn; 9.05</td><td>36.16 &plusmn; 19.97</td></tr>
+    <tr><td>Walker2d-v2</td><td>Reward Scale</td><td>64.33 &plusmn; 11.22</td><td>1.94 &plusmn; 5.64</td><td>64.33 &plusmn; 11.22</td></tr>
+    <tr style="font-weight: bold; background-color: #e2e8f0;">
+      <td colspan="2">Aggregate IQM [95% CI]</td>
+      <td>38.78 [37.43, 40.03]</td>
+      <td>12.30 [9.36, 15.10]</td>
+      <td>38.78 [37.43, 40.03]</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2. Aggregate Statistical Distribution (rliable)</h2>
+<div style="display: flex; gap: 20px;">
+  <div class="fig-box" style="flex: 1;">
+    <img src="figures/iqm.png" alt="IQM">
+    <div class="fig-caption">Figure 1a: Aggregate Interquartile Mean (IQM) across 150 runs with stratified bootstrap 95% confidence intervals.</div>
+  </div>
+  <div class="fig-box" style="flex: 1;">
+    <img src="figures/prob_improvement.png" alt="Probability of Improvement">
+    <div class="fig-caption">Figure 1b: Empirical probability of improvement matrix showing Baseline and CapacityGate superiority over unconditional intervention (P = 0.933).</div>
+  </div>
+</div>
+
+<h2>3. Online Adaptation Dynamics</h2>
+<div class="fig-box">
+  <img src="figures/learning_curves.png" alt="Learning Curves">
+  <div class="fig-caption">Figure 2: Online adaptation learning curves across 25,000 steps for all benchmark cells. Fixed periodic Shrink-and-Perturb induces immediate and permanent policy collapse in balance-critical locomotion tasks (Hopper and Walker2d).</div>
+</div>
+
+<h2>4. Diagnostic Trajectories and Performance Retention</h2>
+<div style="display: flex; gap: 20px;">
+  <div class="fig-box" style="flex: 1;">
+    <img src="figures/capacity_trajectories.png" alt="Capacity Trajectories">
+    <div class="fig-caption">Figure 3a: Representation diagnostics (effective rank ratio &rho; and dormant fraction d) monitored during online adaptation, remaining within healthy bounds (&rho; &gt; 0.70, d &lt; 0.15).</div>
+  </div>
+  <div class="fig-box" style="flex: 1;">
+    <img src="figures/clean_vs_shifted.png" alt="Clean vs Shifted">
+    <div class="fig-caption">Figure 3b: Performance retention across clean, observation noise, and reward scaling regimes.</div>
+  </div>
+</div>
+
+<h2>5. Operator Stability Asymmetry Under Non-Stationary Physical Stress</h2>
+<div class="fig-box">
+  <img src="figures/stress_operator_asymmetry.png" alt="Operator Stability Asymmetry">
+  <div class="fig-caption">Figure 4: Operator stability asymmetry under severe actuator crippling at step 5,000. On balance-critical Walker2d, weight-space perturbation (Fixed) collapses bipedal locomotion (-0.53 &plusmn; 0.33), whereas zero-functional-shift ReDo preserves balance (8.03 &plusmn; 1.57). In unconstrained HalfCheetah, breaking the offline prior promotes alternate galloping gaits (Fixed 15.26, ReDo 13.64 vs Baseline 6.23).</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Environment</th>
+      <th>Baseline (None)</th>
+      <th>Fixed (Shrink-Perturb)</th>
+      <th>ReDo (Neuron Recycling)</th>
+      <th>CapacityGate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>HalfCheetah-v2</td><td>6.23 &plusmn; 1.53</td><td>15.26 &plusmn; 2.93</td><td>13.64 &plusmn; 3.18</td><td>8.58 (Single-Cell Validated)</td></tr>
+    <tr><td>Walker2d-v2</td><td>8.21 &plusmn; 2.38</td><td>-0.53 &plusmn; 0.33</td><td><strong>8.03 &plusmn; 1.57</strong></td><td>7.23 (Baseline Parity)</td></tr>
+  </tbody>
+</table>
+
+<div class="future-box">
+  <div style="font-weight: bold; color: #166534; font-size: 11pt;">Conclusion &amp; Future Work (Section 8)</div>
+  <p style="margin: 6px 0 10px 0; color: #14532d;">Plasticity interventions in offline-to-online RL should not be treated as indiscriminate background routines, but rather as regime- and operator-dependent operations governed by capacity telemetry. Four key future avenues are detailed in the manuscript:</p>
+  <ol>
+    <li><strong>Exploration-Oriented Zero-Shift Operators:</strong> Combining the structural safety of zero-functional-shift recycling ($W_{\mathrm{out}} = 0$) with targeted exploratory policy perturbations to discover alternate kinematic gaits.</li>
+    <li><strong>Adaptive and Self-Calibrating Thresholds:</strong> Automating diagnostic thresholds ($\rho_{\mathrm{on}}, d_{\mathrm{on}}$) via running statistics or meta-learning across heterogeneous tasks.</li>
+    <li><strong>High-Dimensional Visual Control and Robotics:</strong> Extending the "Do Not Disturb" principle to pixel observations (DeepMind Control Suite) and real-world robotic hardware transfer.</li>
+    <li><strong>Multi-Task and Lifelong Transfer:</strong> Evaluating capacity telemetry over non-stationary multi-task sequences and lifelong RL horizons.</li>
+  </ol>
+</div>
+
+<div class="alert-box">
+  <strong>Appendix Demarcation Note:</strong> All supplementary tables are explicitly numbered as <strong>Table A.1</strong> (Complete 135-Run Primary Benchmark Breakdown across Seeds 0&ndash;4) and <strong>Table A.2</strong> (Experimental Hyperparameters and Diagnostic Settings), located in the Appendix after the references.
+</div>
+
+</div>
+</body>
+</html>
+'''
+
+with open('research_paper/iclr2027/preview.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+print('Successfully generated updated research_paper/iclr2027/preview.html!')

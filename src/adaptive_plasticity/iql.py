@@ -194,12 +194,18 @@ class IQLAgent:
         the Q update bootstraps V values computed before the V step; the
         policy update reuses the V-step advantage for weighting. The update is
         deterministic given parameters and batch (no sampling inside).
+
+        All floating-point batch entries are normalized to float32 here (the
+        model dtype): online NumPy batches may arrive as float64 (e.g. raw
+        gymnasium observations or empty fallback arrays via torch.as_tensor,
+        which preserves NumPy dtype), and float64 inputs would raise a dtype
+        error against the float32 weights on CPU.
         """
-        observations = batch["observations"].to(self.device)
-        actions = batch["actions"].to(self.device)
-        rewards = batch["rewards"].to(self.device)
-        next_observations = batch["next_observations"].to(self.device)
-        dones = batch["dones"].to(self.device)
+        observations = batch["observations"].to(self.device, dtype=torch.float32)
+        actions = batch["actions"].to(self.device, dtype=torch.float32)
+        rewards = batch["rewards"].to(self.device, dtype=torch.float32)
+        next_observations = batch["next_observations"].to(self.device, dtype=torch.float32)
+        dones = batch["dones"].to(self.device, dtype=torch.float32)
 
         with torch.no_grad():
             next_values = self.value(next_observations)
