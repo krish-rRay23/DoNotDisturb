@@ -25,7 +25,11 @@ for i, l in bad_amp:
     print(f"  Line {i}: {l}")
 
 # 2. Verify no bad mathbf
-bad_mb = [m.group(0) for m in re.finditer(r'\\mathbf\{[^}]+\}', tex) if any(c in m.group(0) for c in ['\\pm', '[', ']', '\\', ' '])]
+bad_mb = []
+for m in re.finditer(r'\\mathbf\{([^}]+)\}', tex):
+    inner = m.group(1)
+    if any(c in inner for c in ['\\pm', '[', ']', '\\', ' ']):
+        bad_mb.append(m.group(0))
 print(f"Bad \\mathbf count: {len(bad_mb)}")
 for b in bad_mb:
     print(f"  Bad mathbf: {b}")

@@ -1,4 +1,6 @@
-\documentclass{article} % For LaTeX2e
+import os
+
+tex_content = r"""\documentclass{article} % For LaTeX2e
 \usepackage{iclr2027_conference,times}
 
 % Optional math commands from https://github.com/goodfeli/dlbook_notation.
@@ -278,47 +280,47 @@ Because our experimental evaluation pairs seeds identically across intervention 
 \multirow{3}{*}{\texttt{halfcheetah-medium-v2}} & \multirow{3}{*}{\texttt{none}} 
   & \texttt{none} & $35.32 \pm 2.29$ & $35.36\ [31.83, 38.23]$ \\
   & & \texttt{fixed} & $10.71 \pm 5.02$ & $11.82\ [2.61, 16.33]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{35.32} \pm \mathbf{2.29}$ & $35.36\ [31.83, 38.23]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{35.32 \pm 2.29}$ & $35.36\ [31.83, 38.23]$ \\
 \cmidrule{2-5}
   & \multirow{3}{*}{\texttt{obs\_noise}} 
   & \texttt{none} & $34.81 \pm 4.14$ & $33.37\ [29.78, 39.92]$ \\
   & & \texttt{fixed} & $17.89 \pm 9.92$ & $19.10\ [2.30, 29.75]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{34.81} \pm \mathbf{4.14}$ & $33.37\ [29.78, 39.92]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{34.81 \pm 4.14}$ & $33.37\ [29.78, 39.92]$ \\
 \cmidrule{2-5}
   & \multirow{3}{*}{\texttt{reward\_scale}} 
   & \texttt{none} & $37.85 \pm 2.83$ & $38.00\ [34.88, 41.55]$ \\
   & & \texttt{fixed} & $9.49 \pm 7.39$ & $5.54\ [1.83, 18.45]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{37.85} \pm \mathbf{2.83}$ & $38.00\ [34.88, 41.55]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{37.85 \pm 2.83}$ & $38.00\ [34.88, 41.55]$ \\
 \midrule
 \multirow{3}{*}{\texttt{hopper-medium-v2}} & \multirow{3}{*}{\texttt{none}} 
   & \texttt{none} & $40.98 \pm 2.46$ & $41.08\ [37.49, 43.99]$ \\
   & & \texttt{fixed} & $14.87 \pm 8.45$ & $16.31\ [3.14, 24.69]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{40.98} \pm \mathbf{2.46}$ & $41.08\ [37.49, 43.99]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{40.98 \pm 2.46}$ & $41.08\ [37.49, 43.99]$ \\
 \cmidrule{2-5}
   & \multirow{3}{*}{\texttt{obs\_noise}} 
   & \texttt{none} & $41.32 \pm 4.70$ & $39.56\ [37.05, 47.66]$ \\
   & & \texttt{fixed} & $36.85 \pm 18.05$ & $28.10\ [19.46, 57.47]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{41.32} \pm \mathbf{4.70}$ & $39.56\ [37.05, 47.66]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{41.32 \pm 4.70}$ & $39.56\ [37.05, 47.66]$ \\
 \cmidrule{2-5}
   & \multirow{3}{*}{\texttt{reward\_scale}} 
   & \texttt{none} & $36.93 \pm 4.20$ & $37.38\ [31.95, 41.95]$ \\
   & & \texttt{fixed} & $24.56 \pm 7.38$ & $21.69\ [17.81, 36.03]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{36.93} \pm \mathbf{4.20}$ & $37.38\ [31.95, 41.95]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{36.93 \pm 4.20}$ & $37.38\ [31.95, 41.95]$ \\
 \midrule
 \multirow{3}{*}{\texttt{walker2d-medium-v2}} & \multirow{3}{*}{\texttt{none}} 
   & \texttt{none} & $31.45 \pm 12.65$ & $33.62\ [9.97, 42.43]$ \\
   & & \texttt{fixed} & $2.14 \pm 5.79$ & $-0.45\ [-0.69, 12.48]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{31.45} \pm \mathbf{12.65}$ & $33.62\ [9.97, 42.43]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{31.45 \pm 12.65}$ & $33.62\ [9.97, 42.43]$ \\
 \cmidrule{2-5}
   & \multirow{3}{*}{\texttt{obs\_noise}} 
   & \texttt{none} & $36.16 \pm 19.97$ & $41.90\ [1.45, 52.41]$ \\
   & & \texttt{fixed} & $6.45 \pm 9.05$ & $1.26\ [-0.56, 19.62]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{36.16} \pm \mathbf{19.97}$ & $41.90\ [1.45, 52.41]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{36.16 \pm 19.97}$ & $41.90\ [1.45, 52.41]$ \\
 \cmidrule{2-5}
   & \multirow{3}{*}{\texttt{reward\_scale}} 
   & \texttt{none} & $64.33 \pm 11.22$ & $66.03\ [47.08, 76.66]$ \\
   & & \texttt{fixed} & $1.94 \pm 5.64$ & $-0.52\ [-0.74, 12.03]$ \\
-  & & \textsc{CapacityGate} & $\mathbf{64.33} \pm \mathbf{11.22}$ & $66.03\ [47.08, 76.66]$ \\
+  & & \textsc{CapacityGate} & $\mathbf{64.33 \pm 11.22}$ & $66.03\ [47.08, 76.66]$ \\
 \midrule
 \multicolumn{3}{l}{\textbf{Aggregate IQM [95\% Bootstrap CI]}} & \textbf{38.78} [37.43, 40.03] & \textbf{12.30} [9.36, 15.10] & \textbf{38.78} [37.43, 40.03] \\
 \bottomrule
@@ -404,14 +406,14 @@ This comparison establishes that \emph{the choice of intervention operator is as
 \midrule
 \multirow{4}{*}{\texttt{halfcheetah-medium-v2}} 
   & \texttt{none} & $7.99$ & $5.49$ & $5.21$ & $6.23 \pm 1.53$ \\
-  & \texttt{fixed} (SP) & $15.29$ & $12.32$ & $18.18$ & $\mathbf{15.26} \pm \mathbf{2.93}$ \\
+  & \texttt{fixed} (SP) & $15.29$ & $12.32$ & $18.18$ & $\mathbf{15.26 \pm 2.93}$ \\
   & \texttt{redo} (Neuron Recycling) & $11.40$ & $12.25$ & $17.29$ & $13.64 \pm 3.18$ \\
   & \textsc{CapacityGate} & $8.58$ & --- & --- & $8.58$ (Single-Cell Validated) \\
 \midrule
 \multirow{4}{*}{\texttt{walker2d-medium-v2}} 
   & \texttt{none} & $7.23$ & $10.93$ & $6.48$ & $8.21 \pm 2.38$ \\
   & \texttt{fixed} (SP) & $-0.71$ & $-0.15$ & $-0.73$ & $-0.53 \pm 0.33$ \\
-  & \texttt{redo} (Neuron Recycling) & $8.45$ & $9.34$ & $6.29$ & $\mathbf{8.03} \pm \mathbf{1.57}$ \\
+  & \texttt{redo} (Neuron Recycling) & $8.45$ & $9.34$ & $6.29$ & $\mathbf{8.03 \pm 1.57}$ \\
   & \textsc{CapacityGate} (Seed 0 Abstain) & $7.23$ & --- & --- & $7.23$ (Baseline Parity) \\
 \bottomrule
 \end{tabular}
@@ -650,3 +652,9 @@ Table~\ref{tab:telemetry_audit} documents the complete step-by-step diagnostic t
 \end{table}
 
 \end{document}
+"""
+
+with open('research_paper/iclr2027/iclr2027_conference.tex', 'w', encoding='utf-8') as f:
+    f.write(tex_content.strip() + '\n')
+
+print("Successfully wrote final polished ICLR 2027 manuscript!")
