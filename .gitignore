@@ -35,3 +35,5 @@ data/raw/
 
 # Legacy test result folder
 RESULT_OLD/
+
+*.zip
