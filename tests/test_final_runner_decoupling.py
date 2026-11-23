@@ -12,6 +12,8 @@ from adaptive_plasticity.final_runner import run_final_cell, _evaluate, should_a
 from adaptive_plasticity.iql import IQLAgent
 from adaptive_plasticity.m5 import make_env, OnlineBuffer
 
+pytestmark = pytest.mark.needs_offline_data
+
 
 def test_shift_decoupling_across_arms():
     """Verify that under obs_noise and reward_scale, all 3 arms receive bit-identical transformed transitions."""
