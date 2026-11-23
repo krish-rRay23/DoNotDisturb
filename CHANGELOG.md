@@ -49,6 +49,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `experiments/check_public_claims.py` checks that the README, the manuscript, and the HTML preview still contain the tokens transcribed in `docs/manuscript_claims.yaml`. It does not recompute them. The unverified revision figures `0.9915`, `1.6501`, and `40.37` are forbidden on those three surfaces. The HTML preview now also states the paired-\(t\) statistic and the bootstrap interval on the mean paired difference, both already in the manuscript.
 
+### LaTeX tables from logs
+
+- `experiments/render_latex_tables.py` writes a mean table and a seed table from supplied `summary.json` files. The numbers are the mean and the sample standard deviation of those scores, plus an IQM from `iqm_by_controller` on the same rows. No scored row means no numeric table. A one-score cell does not print a standard deviation. Duplicate identities are not averaged twice. M5 summaries are grouped by `controller_type` when `controller` is absent. Output from a fixture is labeled `SYNTHETIC FIXTURE` and is not a manuscript table.
+
 ### Figures from logs
 
 - `src/adaptive_plasticity/figures_from_logs.py` writes a bar chart of means from supplied summaries and a `plotted.json` that lists those means. No scores means no file. The output is labeled as not a manuscript figure. Factorial summaries are grouped by `controller`. M5 summaries, which store `controller_type` instead, are grouped by that field.
