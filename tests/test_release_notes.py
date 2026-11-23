@@ -21,11 +21,18 @@ def test_changelog_names_pull_requests_20_through_26_and_their_replacements():
     for number in range(20, 27):
         assert f"#{number}." in section
     assert "experiments/run_overnight.py" in section
+    assert "135-cell primary matrix" in section
+    assert "15 reference cells" in section
     assert "experiments/final_factorial.py --execute --confirm-matrix CONFIRM-FINAL-150" in section
     assert "experiments/benchmark_concurrency.py" in section
+    assert "nothing replaces those measurements" in section
     assert "--workers" in section
+    assert "does not sweep worker counts" in section
     assert "experiments/mechanistic_stress_test.py" in section
+    assert "35% neuron dormancy" in section
+    assert "has no successor" in section
     assert "experiments/stress_factorial.py --execute --confirm-matrix CONFIRM-STRESS-24" in section
+    assert "different experiment" in section
     assert "No manuscript number was added or replaced." in section
 
 
