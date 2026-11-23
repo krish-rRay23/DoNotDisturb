@@ -4,6 +4,17 @@
 
 Aligned the public text with the manuscript in `research_paper/iclr2027/iclr2027_conference.tex` and added launch paths for experiments that have not been run.
 
+### Merged pull requests #14–#19
+
+`requirements.txt` already pinned every direct dependency with `==` before these pull requests. `REPRODUCIBILITY.md` already tells a headless machine to export `MUJOCO_GL=glfw` (`egl` did not import here). Neither item needed a new pin or a new environment note.
+
+- #14. Public claim check. The README, the manuscript, and `preview.html` are checked against transcribed tokens. No result is recomputed.
+- #15. Figures from logs. Score bars are drawn only from supplied summaries. A missing score writes no figure. M5 summaries are grouped by `controller_type`.
+- #16. Paired effect size. Cohen's dz is the mean paired difference divided by its sample standard deviation, and the p-value is labeled unadjusted. It is not a manuscript test.
+- #17. `make check`. One entry point runs the unit tests, the plan dry-run, a read-only manifest hash check, and the public-claim check. A present file with no sha256 fails. An absent file does not.
+- #18. LaTeX tables from supplied summaries. Means, sample standard deviations, and IQMs come from those files. M5 `shift_type`, including the no-shift case, is kept. A fixture is labeled as a fixture.
+- #19. Limitations and wording. The limitations section states scope, and missing citations are marked `TODO: cite`. No manuscript number was added or replaced.
+
 ### Source of numbers
 
 - No revised manuscript, response to reviewers, or `README_UPDATED.md` is in the repository. Reported figures stay the manuscript figures. They were not recomputed and no new scores were invented.
