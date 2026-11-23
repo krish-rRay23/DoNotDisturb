@@ -4,3 +4,5 @@
 
 `claim_numeric_tokens.yaml` lists every decimal and `10^{n}` power printed in the manuscript, under one of those claim ids. `experiments/check_claim_coverage.py` fails when a new decimal is printed and is not in that map.
 
+`run_guide.md` is the GPU sequence for the four confirm-gated matrices and for regenerating tables and figures from their outputs. It does not launch those runs.
+
