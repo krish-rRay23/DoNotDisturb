@@ -109,6 +109,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `docs/claim_log_checklist.md` maps each manuscript claim to the script and the working-tree log that would carry it. A missing log is `unverified`. A file that is on disk is `present_not_recomputed` and is not opened. The supplementary zip is not unpacked. Short pilots stay `not_a_manuscript_result`. The older final summary and the pooled stress IQM stay `not_the_manuscript_table`. The learning-curve row points at `results/reproduced_figures/figure2_online_adaptation_learning_curves.png` and `plots/final/learning_curves.png`, the two files those scripts write. The stress-table row counts only `STRESS-*/summary.json`, so a `STABLE_VAL` summary in the same directory does not mark that table present.
 
+### Claim coverage
+
+- `make check` runs `experiments/check_claim_coverage.py`. Every decimal and every `10^{n}` power printed in the manuscript must appear under a claim id in `docs/claim_numeric_tokens.yaml`. A TeX dimension is not a claim. The check does not recompute a score. `protocol_settings` holds controller and optimizer settings, not scores.
+
 ### Not run
 
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).

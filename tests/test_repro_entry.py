@@ -33,9 +33,10 @@ def test_make_check_runs_tests_plans_and_hashes_with_glfw():
     assert "experiments/dry_run_plans.py --plans-only" in makefile
     assert "experiments/check_manifests.py" in makefile
     assert "experiments/check_public_claims.py" in makefile
+    assert "experiments/check_claim_coverage.py" in makefile
     assert '-m "not needs_offline_data"' in makefile
-    # The default target chains the three reproducibility checks.
-    assert "check: test dry-run hash-check claims" in makefile
+    # The default target chains the reproducibility checks.
+    assert "check: test dry-run hash-check claims claim-coverage" in makefile
 
 
 def test_hash_check_is_read_only_and_distinguishes_mismatch(tmp_path):
