@@ -261,7 +261,7 @@ When an agent experiences genuine physical disruption (joint actuator disabled a
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.88\textwidth]{figures/stress_operator_asymmetry.png}
-\caption{\textbf{Operator Stability Asymmetry Under Physical Non-Stationarity.} Normalized returns under joint actuator crippling at step 5,000. Bars for Baseline (None), Fixed (Shrink-and-Perturb), and ReDo (an approximate, low-disruption reset) depict mean $\pm$ std across 3 paired seeds. \textsc{CapacityGate} is displayed with hatched bars to denote single-cell deterministic validation (Seed 0) rather than a 3-seed mean: on Walker2d Seed 0, \textsc{CapacityGate} safely abstains, preserving Baseline parity ($7.23$); on HalfCheetah Seed 0, it executes spaced pulses with refractory cooldown, achieving $8.58$ vs. $7.99$ unperturbed. In balance-critical Walker2d, weight-perturbation operators (Fixed) inject non-zero functional shifts that destroy the bipedal equilibrium manifold ($-0.53 \pm 0.33$). In sharp contrast, dormant neuron recycling (ReDo) preserves balance ($8.03 \pm 1.57$, matching Baseline $8.21 \pm 2.38$) due to its approximate, low-disruption reset ($W_{\mathrm{out}} = 0$ on low-activation units). In unconstrained HalfCheetah, disrupting the offline prior aids in discovering alternate locomotion, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to outperform the passive baseline ($6.23 \pm 1.53$).}
+\caption{\textbf{Operator Stability Asymmetry Under Physical Non-Stationarity.} Normalized returns under joint actuator crippling at step 5,000. Bars for Baseline (None), Fixed (Shrink-and-Perturb), and ReDo (an approximate, low-disruption reset) depict mean $\pm$ standard deviation across 3 paired seeds. \textsc{CapacityGate} is displayed with hatched bars to denote single-cell deterministic validation (Seed 0) rather than a 3-seed mean: on Walker2d Seed 0, \textsc{CapacityGate} safely abstains, preserving Baseline parity ($7.23$); on HalfCheetah Seed 0, it executes spaced pulses with refractory cooldown, achieving $8.58$ vs. $7.99$ unperturbed. In balance-critical Walker2d, weight-perturbation operators (Fixed) inject non-zero functional shifts that destroy the bipedal equilibrium manifold ($-0.53 \pm 0.33$). In sharp contrast, ReDo (an approximate, low-disruption reset) preserves balance ($8.03 \pm 1.57$, matching Baseline $8.21 \pm 2.38$) because outgoing weights on low-activation units are zero ($W_{\mathrm{out}} = 0$). In unconstrained HalfCheetah, disrupting the offline prior aids in discovering alternate locomotion, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to outperform the passive baseline ($6.23 \pm 1.53$).}
 \label{fig:stress_operator_asymmetry}
 \end{figure}
 
@@ -479,7 +479,7 @@ ReDo Activation Threshold ($\tau_{\mathrm{redo}}$) & $0.10$ \\
 \section{Diagnostic Telemetry Trajectories Across Regimes}
 \label{app:telemetry_plots}
 
-Figure~\ref{fig:capacity_trajectories} displays live online diagnostic trajectories for relative effective rank ($\rho$) and activation dormancy ($d$) across clean and shifted adaptation, as well as performance retention distributions.
+Figure~\ref{fig:capacity_trajectories} displays live online diagnostic trajectories for relative effective rank ($\rho(t)$) and activation dormancy ($d(t)$) across clean and shifted adaptation, as well as performance retention distributions.
 
 \begin{figure}[h]
 \centering
@@ -496,7 +496,7 @@ Figure~\ref{fig:capacity_trajectories} displays live online diagnostic trajector
     \caption{Performance Retention Across Regimes}
     \label{fig:clean_vs_shifted_app}
 \end{subfigure}
-\caption{\textbf{Diagnostic Telemetry and Cross-Regime Performance Retention.} (a) Online trajectories of relative effective rank ($\rho$) and activation dormancy ($d$) under clean and shifted regimes. Representation capacity remains well within healthy operational bounds ($\rho > 0.70, d < 0.15$). (b) Normalized returns across clean, observation noise, and reward scaling regimes: \textsc{CapacityGate} matches Baseline across all regimes, avoiding the collapse of unconditional intervention.}
+\caption{\textbf{Diagnostic Telemetry and Cross-Regime Performance Retention.} (a) Online trajectories of relative effective rank ($\rho(t)$) and activation dormancy ($d(t)$) under clean and shifted regimes. Representation capacity remains well within healthy operational bounds ($\rho(t) > 0.70, d(t) < 0.15$). (b) Normalized returns across clean, observation noise, and reward scaling regimes: \textsc{CapacityGate} matches Baseline across all regimes, avoiding the collapse of unconditional intervention.}
 \label{fig:capacity_trajectories}
 \end{figure}
 
