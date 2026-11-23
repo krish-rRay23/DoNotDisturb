@@ -24,6 +24,8 @@ from adaptive_plasticity.offline_cache import (
     train_offline_checkpoint,
 )
 
+pytestmark = pytest.mark.needs_offline_data
+
 
 def test_offline_checkpoint_creation_and_validity(tmp_path):
     ckpt_dir = tmp_path / "offline_ckpts"

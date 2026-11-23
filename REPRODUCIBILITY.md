@@ -39,6 +39,9 @@ Stress means are the manuscript's Table `tab:stress_results`. CapacityGate is se
 
 ```bash
 pytest tests/ -q
+# CI uses the same suite without the cells that load gitignored D4RL files:
+MUJOCO_GL=glfw pytest tests/ -q -m "not needs_offline_data"
+
 python experiments/final_factorial.py --help
 python experiments/stress_factorial.py
 python experiments/run_ablations.py

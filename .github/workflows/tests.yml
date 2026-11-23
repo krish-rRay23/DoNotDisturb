@@ -1,0 +1,37 @@
+# Unit tests only. Does not download D4RL files and does not train.
+# Tests marked needs_offline_data load the gitignored hdf5 files under data/raw
+# and are excluded here.
+
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Headless MuJoCo libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libglfw3 libgl1 libglib2.0-0 xvfb
+
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Pytest without offline datasets
+        env:
+          # glfw plus Xvfb. egl is not available on this headless runner.
+          MUJOCO_GL: glfw
+        run: xvfb-run -a python -m pytest tests/ -q -m "not needs_offline_data"

@@ -40,3 +40,6 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra"
+markers = [
+    "needs_offline_data: loads a gitignored D4RL hdf5 from data/raw; skipped in CI",
+]
