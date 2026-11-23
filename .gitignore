@@ -37,3 +37,6 @@ data/raw/
 RESULT_OLD/
 
 *.zip
+
+# MuJoCo writes this next to the process cwd.
+MUJOCO_LOG.TXT

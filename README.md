@@ -2,169 +2,145 @@
 
 [![Paper](https://img.shields.io/badge/Paper-ICLR%202027%20Submission-blue.svg)](research_paper/iclr2027/iclr2027_conference.tex)
 [![Preview](https://img.shields.io/badge/HTML-Interactive%20Preview-brightgreen.svg)](research_paper/iclr2027/preview.html)
-[![Tests](https://img.shields.io/badge/Tests-88%2B%20Passing-success.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Official research repository and codebase for the paper:
-**"Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning"** (Target: ICLR 2027).
+Official code for **"Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning"** (ICLR 2027 submission).
+
+The numbers below are copied from [`research_paper/iclr2027/iclr2027_conference.tex`](research_paper/iclr2027/iclr2027_conference.tex). There is no separate revised manuscript, no `README_UPDATED.md`, and no response-to-reviewers file in this repository. Nothing in the new ablation plans has been run, and those plans do not change the tables.
+
+ReDo is an **approximate, low-disruption** reset. Units below a relative activation threshold have their incoming weights reinitialized and their outgoing weights zeroed. The forward map is unchanged only for units that were already silent. It is not an identity operator.
 
 ---
 
-## Executive Summary
+## Result
 
-Maintaining neural network plasticity is widely regarded as an indispensable prerequisite for continual reinforcement learning (RL). A vibrant literature advocates periodic parameter interventions—such as network resets, Shrink-and-Perturb, and dormant neuron recycling—to counteract capacity loss, dead units, and feature rank collapse. While effective in continual supervised learning and online RL from scratch, these methods rest on an implicit assumption: **that plasticity restoration is universally benign and can be scheduled unconditionally.**
+Unconditional plasticity restoration is not benign for an offline-to-online locomotion agent. The agent already has a structured policy and value function. Periodic Shrink-and-Perturb during online fine-tuning collapses aggregate interquartile-mean (IQM) normalized return by 68.3%, from **38.78** to **12.30** (paired Wilcoxon signed-rank \(W = 18.0\), \(p = 1.44 \times 10^{-11}\), mean paired difference \(+26.03 \pm 19.09\), \(N = 45\) seed-matched pairs).
 
-In this work, we demonstrate that this assumption fails fundamentally in **offline-to-online (O2O) continuous-control RL**. When transitioning from static pretraining to online interaction, agents inherit structured, high-performing policy and value manifolds. Across standard D4RL continuous-control locomotion benchmarks, we show that unconditional periodic Shrink-and-Perturb induces severe **intervention vulnerability**, destabilizing converged locomotion policies and causing a catastrophic **68.3% collapse in aggregate Interquartile Mean (IQM) normalized return** ($38.78 \to 12.30$, paired Wilcoxon signed-rank $W = 18.0$, $p = 1.44 \times 10^{-11}$).
+**CapacityGate** monitors relative effective rank \(\rho\) and activation dormancy \(d\) on a uniform sample of the online replay buffer, with hysteresis and a refractory cooldown. In the tested stable and moderately shifted transfers, capacity stays intact (\(\rho \in [0.99, 1.03]\), \(d \le 0.085\)) and the gate records **zero interventions** across the 45 primary cells (0 of 1,125 evaluations). Return stays at the baseline IQM of **38.78**.
 
-To address this vulnerability, we formulate the **"Do Not Disturb" principle**:
-> *An agent should only intervene to restore representation capacity when diagnostic telemetry confirms that capacity has collapsed; otherwise, converged policy manifolds should be left undisturbed.*
+Under sudden actuator crippling, the operator matters. Shrink-and-Perturb drops Walker2d to **\(-0.53 \pm 0.33\)**. The approximate, low-disruption ReDo reset stays near the unperturbed baseline at **\(8.03 \pm 1.57\)** (baseline \(8.21 \pm 2.38\)). On HalfCheetah, where falling is impossible, both operators exceed the crippled baseline. CapacityGate in that stress table is a **seed-0** cell, not a three-seed mean.
 
-We introduce **`CapacityGate`**, a closed-loop diagnostic framework that monitors feature effective rank ($\rho$) and neuron dormancy ($d$) using uniform replay reservoir sampling and refractory cooldown control. Furthermore, under non-stationary physical stress (actuator crippling), we uncover a profound **operator stability asymmetry**: zero-functional-shift neuron recycling (ReDo) preserves balance manifolds where unconstrained weight perturbation causes total dynamical collapse.
-
----
-
-## Core Research Questions & Findings
-
-### RQ1: Intervention Vulnerability
-*Does unconditional periodic parameter intervention restore or degrade policy performance during offline-to-online transfer in continuous locomotion?*
-- **Finding**: Unconditional periodic intervention is overwhelmingly detrimental in stable transfer. Across 45 paired evaluations ($N=150$ total matched runs), periodic Shrink-and-Perturb degrades performance in **93.3% of comparisons**, dropping aggregate IQM from $38.78$ to $12.30$. In balance-critical bipedal locomotion (Walker2d), it induces immediate and permanent falling ($31.45 \to 2.14$).
-
-### RQ2: Diagnostic Feasibility & Abstention
-*Can online representation health metrics reliably detect intact capacity and govern intervention decisions through closed-loop abstention?*
-- **Finding**: In stable and moderately shifted O2O transfer, representations do not spontaneously collapse: relative effective rank remains near baseline ($\rho \in [0.99, 1.03]$) and dormant neuron fractions remain minimal ($d \le 0.085$). `CapacityGate` detects that capacity remains intact and safely **abstains from intervention**, preserving 100% of baseline performance ($38.78$ IQM) and completely preventing perturbation-induced collapse.
-
-### RQ3: Operator Sensitivity Under Non-Stationarity
-*Under genuine physical distribution shifts (actuator crippling), how do functional-shift versus zero-functional-shift intervention operators differ in preserving continuous control equilibria?*
-- **Finding**: Intervention operators exhibit a stark stability asymmetry dictated by their functional shift:
-  - On **Walker2d** (bipedal balance), non-zero functional shift operators ($\Delta f_\theta(x) \neq 0$) cause total dynamic collapse ($-0.53 \pm 0.33$). In contrast, zero-functional-shift dormant neuron recycling ($W_{\text{out}} = 0$, ReDo) preserves viable walking gait dynamics ($8.03 \pm 1.57$, matching the unperturbed baseline).
-  - On **HalfCheetah** (unconstrained balance), breaking the offline prior via weight perturbation promotes alternative galloping gaits, boosting return ($15.26$ vs. $6.23$ baseline).
+The benchmark is 150 runs: 135 primary factorial runs (3 environments × 3 regimes × 3 arms × 5 seeds) and 15 frozen reference runs. The stress harness is a separate 24-cell plan; the manuscript reports CapacityGate there for seed 0 only.
 
 ---
 
-## Key Empirical Results
+## Questions and findings
 
-### Primary Confirmatory Benchmark (135 Runs, 5 Paired Seeds)
+**RQ1. Does unconditional periodic intervention help or hurt offline-to-online locomotion?**
+Periodic Shrink-and-Perturb is worse in 42 of 45 matched pairs (\(P(\text{none} > \text{fixed}) = 0.933\)). On Walker2d with no extra shift the cell mean falls from \(31.45 \pm 12.65\) to \(2.14 \pm 5.79\).
 
-| Environment | Shift Regime | Baseline (None) | Fixed (Shrink-Perturb) | CapacityGate |
-| :--- | :--- | :---: | :---: | :---: |
-| **HalfCheetah-v2** | None | $35.32 \pm 2.29$ | $10.71 \pm 5.02$ | $\mathbf{35.32 \pm 2.29}$ |
-| | Obs Noise ($\sigma=0.1$) | $34.81 \pm 4.14$ | $17.89 \pm 9.92$ | $\mathbf{34.81 \pm 4.14}$ |
-| | Reward Scale ($\alpha=0.5$) | $37.85 \pm 2.83$ | $9.49 \pm 7.39$ | $\mathbf{37.85 \pm 2.83}$ |
-| **Hopper-v2** | None | $40.98 \pm 2.46$ | $14.87 \pm 8.45$ | $\mathbf{40.98 \pm 2.46}$ |
-| | Obs Noise ($\sigma=0.1$) | $41.32 \pm 4.70$ | $36.85 \pm 18.05$ | $\mathbf{41.32 \pm 4.70}$ |
-| | Reward Scale ($\alpha=0.5$) | $36.93 \pm 4.20$ | $24.56 \pm 7.38$ | $\mathbf{36.93 \pm 4.20}$ |
-| **Walker2d-v2** | None | $31.45 \pm 12.65$ | $2.14 \pm 5.79$ | $\mathbf{31.45 \pm 12.65}$ |
-| | Obs Noise ($\sigma=0.1$) | $36.16 \pm 19.97$ | $6.45 \pm 9.05$ | $\mathbf{36.16 \pm 19.97}$ |
-| | Reward Scale ($\alpha=0.5$) | $64.33 \pm 11.22$ | $1.94 \pm 5.64$ | $\mathbf{64.33 \pm 11.22}$ |
-| **Aggregate IQM** | **Stratified Bootstrap [95% CI]** | **38.78** [37.43, 40.03] | **12.30** [9.36, 15.10] | **38.78** [37.43, 40.03] |
+**RQ2. Can rank and dormancy tell the agent to abstain?**
+In the stable and moderate-shift matrix they can. CapacityGate matches the baseline cell by cell because it does not fire. That is measured abstention, not a claim that the same thresholds will abstain under every shift.
 
-### Non-Stationary Stress Study (Actuator Crippling at Step 5,000)
-
-| Environment | Baseline (None) | Fixed (Shrink-Perturb) | ReDo (Neuron Recycling) | CapacityGate |
-| :--- | :---: | :---: | :---: | :---: |
-| **HalfCheetah-v2** | $6.23 \pm 1.53$ | $\mathbf{15.26 \pm 2.93}$ | $13.64 \pm 3.18$ | $8.58$ (Single-Cell Validated) |
-| **Walker2d-v2** | $8.21 \pm 2.38$ | $-0.53 \pm 0.33$ | $\mathbf{8.03 \pm 1.57}$ | $7.23$ (Baseline Parity) |
+**RQ3. Under actuator crippling, how does a large functional change compare with an approximate, low-disruption reset?**
+On Walker2d, Shrink-and-Perturb destroys balance and ReDo does not. On HalfCheetah, Shrink-and-Perturb reaches \(15.26 \pm 2.93\) and ReDo \(13.64 \pm 3.18\), against a baseline of \(6.23 \pm 1.53\).
 
 ---
 
-## Architecture Overview
+## Primary benchmark
+
+Final normalized return after 25,000 online steps. Mean ± standard deviation over 5 paired seeds. CapacityGate matches the baseline in every cell below because it did not intervene.
+
+| Environment | Regime | Baseline | Shrink-and-Perturb | CapacityGate |
+| --- | --- | ---: | ---: | ---: |
+| halfcheetah-medium-v2 | none | \(35.32 \pm 2.29\) | \(10.71 \pm 5.02\) | \(35.32 \pm 2.29\) |
+| | obs. noise \(\sigma=0.1\) | \(34.81 \pm 4.14\) | \(17.89 \pm 9.92\) | \(34.81 \pm 4.14\) |
+| | reward scale \(0.5\) | \(37.85 \pm 2.83\) | \(9.49 \pm 7.39\) | \(37.85 \pm 2.83\) |
+| hopper-medium-v2 | none | \(40.98 \pm 2.46\) | \(14.87 \pm 8.45\) | \(40.98 \pm 2.46\) |
+| | obs. noise \(\sigma=0.1\) | \(41.32 \pm 4.70\) | \(36.85 \pm 18.05\) | \(41.32 \pm 4.70\) |
+| | reward scale \(0.5\) | \(36.93 \pm 4.20\) | \(24.56 \pm 7.38\) | \(36.93 \pm 4.20\) |
+| walker2d-medium-v2 | none | \(31.45 \pm 12.65\) | \(2.14 \pm 5.79\) | \(31.45 \pm 12.65\) |
+| | obs. noise \(\sigma=0.1\) | \(36.16 \pm 19.97\) | \(6.45 \pm 9.05\) | \(36.16 \pm 19.97\) |
+| | reward scale \(0.5\) | \(64.33 \pm 11.22\) | \(1.94 \pm 5.64\) | \(64.33 \pm 11.22\) |
+| **Aggregate IQM** | 95% stratified bootstrap CI | **38.78** [37.43, 40.03] | **12.30** [9.36, 15.10] | **38.78** [37.43, 40.03] |
+
+The same aggregate comparison has a paired \(t\)-statistic \(t = 9.15\) (\(p = 9.69 \times 10^{-12}\)) and a bootstrap 95% interval on the mean paired difference of \([20.72, 31.59]\) (median paired difference \(+22.27\)).
+
+## Actuator-crippling stress table
+
+Joint 0 is zeroed on HalfCheetah and joint 2 on Walker2d, starting at step 5,000. Means for `none`, `fixed`, and `redo` use seeds 0, 1, and 2. CapacityGate is seed 0 only.
+
+| Environment | Baseline | Shrink-and-Perturb | ReDo | CapacityGate (seed 0) |
+| --- | ---: | ---: | ---: | ---: |
+| halfcheetah-medium-v2 | \(6.23 \pm 1.53\) | \(15.26 \pm 2.93\) | \(13.64 \pm 3.18\) | 8.58 |
+| walker2d-medium-v2 | \(8.21 \pm 2.38\) | \(-0.53 \pm 0.33\) | \(8.03 \pm 1.57\) | 7.23 (matches that seed's baseline) |
+
+On HalfCheetah seed 0 the unperturbed baseline is 7.99 and CapacityGate, which does intervene after the rank trigger, finishes at 8.58. The three-seed baseline mean is 6.23. Those are different summaries of different seeds.
+
+---
+
+## What is not a result yet
+
+These paths exist so they can be launched with one command. They have **not been run**. Do not cite them as findings.
+
+- **Probe distribution.** Published monitoring uses a uniform draw from the online buffer, with the frozen offline batch as the rank anchor and as the fallback before the buffer can fill a probe. The ablation adds the frozen offline batch on every step and recent windows of 256 and 1,024 transitions, on all three locomotion datasets. Config: `configs/ablations/probe_distributions.yaml`.
+- **Gate thresholds, cooldown, and operator.** One-factor sweeps around the published settings (\(\rho_{\mathrm{on}}=0.70\), \(\rho_{\mathrm{off}}=0.85\), \(d_{\mathrm{on}}=0.15\), \(d_{\mathrm{off}}=0.08\), cooldown 3,000, Shrink-and-Perturb). The alternate operator under the gate is ReDo. Configs: `configs/ablations/`.
+- **More stress seeds.** The manuscript does not report CapacityGate seeds 1–2 or any seed above 2. `experiments/analyze_stress_coverage.py` prints that coverage. It does not fill in the missing cells.
+- **Cal-QL, PEX, and RO2O.** Not vendored. `src/adaptive_plasticity/o2o_adapters.py` records the papers, the upstream repositories, and the methods a wrapper must implement. Calling one raises `ExternalLearnerUnavailable`. The in-repo learner is IQL.
+
+An older note in `docs/final_study_v2_scientific_report.md` describes a different protocol and different cell means. It is not the manuscript table.
+
+The supplementary zip's README quotes IQM intervals \([37.43, 40.06]\) and \([9.31, 15.23]\). The manuscript, and `results/final_study/FINAL_analysis_summary.json` inside that zip, use **[37.43, 40.03]** and **[9.36, 15.10]** after rounding. Use the manuscript intervals.
+
+---
+
+## Layout
 
 ```
-adaptive-plasticity-rl/
-├── configs/                            # Experiment and diagnostic configuration files
-├── data/manifests/                     # D4RL dataset SHA256 provenance manifests
-├── experiments/                        # Reproducible experiment runners
-│   ├── final_factorial.py              # Primary 135-run confirmatory factorial suite
-│   ├── stress_factorial.py             # 24-run non-stationary stress study suite
-│   ├── final_analysis.py               # Statistical evaluation & rliable integration
-│   └── stress_analysis.py              # Stress test diagnostics & plotting
-├── research_paper/                     # Complete ICLR 2027 conference submission
-│   ├── iclr2027/
-│   │   ├── iclr2027_conference.tex     # Full LaTeX manuscript (all sections & proofs)
-│   │   ├── iclr2027_conference.bib     # Curated 2016-2026 bibliography
-│   │   ├── iclr2027_conference.sty     # Official conference style file
-│   │   ├── preview.html                # Interactive HTML paper preview
-│   │   └── figures/                    # Publication-grade vector and PNG figures
-│   └── iclr2027_paper_submission.zip   # Overleaf-ready submission archive
-├── src/adaptive_plasticity/            # Core Python package
-│   ├── capacity_gate.py                # Closed-loop diagnostic CapacityGate controller
-│   ├── interventions.py                # Shrink-and-Perturb and ReDo operators
-│   ├── final_runner.py                 # Resilient online adaptation runner
-│   ├── offline_cache.py                # Decoupled offline pretraining cache
-│   ├── distribution_shifts.py          # Observation noise, reward scaling & actuator crippling
-│   ├── iql.py                          # Implicit Q-Learning baseline implementation
-│   └── m6.py                           # Effective rank (sRank) & dormancy diagnostics
-└── tests/                              # Pytest test suite (>88 unit and integration tests)
+configs/ablations/                 # probe, threshold, cooldown, operator grids
+experiments/final_factorial.py     # 135 + 15 confirmatory plan
+experiments/stress_factorial.py    # 24-cell stress harness and seed extension
+experiments/run_ablations.py       # ablation dry-run, smoke, and launch
+experiments/analyze_stress_coverage.py
+src/adaptive_plasticity/           # CapacityGate, ReDo, IQL, probe sources, adapters
+research_paper/iclr2027/           # manuscript
+tests/                             # unit tests, including the new plans
 ```
+
+Published CapacityGate defaults, also the reference cells in the ablation configs: probe source `online_buffer`, probe size 256, dormancy on/off 0.15/0.08, relative rank on/off 0.70/0.85, cooldown 3,000 steps, operator `shrink_perturb`, intervention severity 0.1.
 
 ---
 
-## Quick Start
-
-### 1. Installation
+## Install and check
 
 ```bash
-# Create and activate Python 3.11 virtual environment
 python -m venv .venv
-# Linux/macOS:
 source .venv/bin/activate
-# Windows:
-.\.venv\Scripts\Activate.ps1
-
-# Upgrade pip and install package in editable mode
-pip install --upgrade pip
+pip install -r requirements.txt
 pip install -e ".[dev]"
-```
-
-### 2. Run Test Suite
-
-```bash
-# Run all unit and integration tests
 pytest tests/ -q
-
-# Run specific CapacityGate and intervention tests
-pytest tests/test_capacity_gate.py -v
-pytest tests/test_interventions.py -v
-pytest tests/test_final_protocol.py -v
+python experiments/run_ablations.py --smoke
+python experiments/stress_factorial.py
+python experiments/analyze_stress_coverage.py
 ```
 
-### 3. Run Experiments
+`requirements.txt` pins the versions used for those checks (Python 3.12). `torch==2.14.0` installs a CUDA build; this environment has no GPU, and the runners accept `--device cpu`.
+
+Full MuJoCo training is intentionally not started by the commands above. Exact launch commands, dataset acquisition, and the confirm tokens are in [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
+
+Raw D4RL files are not in git. Acquire them before any training command:
 
 ```bash
-# Run primary 135-run factorial experiment suite across 3 seeds/environments
-python experiments/final_factorial.py --workers 4
-
-# Run non-stationary physical stress study (actuator crippling)
-python experiments/stress_factorial.py --workers 2
-
-# Compute rigorous statistical analysis (IQM, Wilcoxon signed-rank, CIs)
-python scratch/full_scientific_analysis.py
+python -m adaptive_plasticity.datasets --acquire hopper-medium-v2
 ```
 
-### 4. Paper Artifacts & Verification
-
-- **Full LaTeX Manuscript**: Located in [`research_paper/iclr2027/iclr2027_conference.tex`](research_paper/iclr2027/iclr2027_conference.tex).
-- **Interactive Preview**: Open [`research_paper/iclr2027/preview.html`](research_paper/iclr2027/preview.html) in any modern web browser.
-- **Overleaf Submission ZIP**: [`research_paper/iclr2027_paper_submission.zip`](research_paper/iclr2027_paper_submission.zip).
-- **LaTeX Syntax Audit**: Run `python scratch/validate_latex.py` to verify zero unescaped characters, matching environments, and cross-reference validity.
+Repeat for `halfcheetah-medium-v2` and `walker2d-medium-v2`.
 
 ---
 
 ## Citation
 
-If you find this work or codebase useful in your research, please cite:
+The manuscript is an anonymous conference submission. The bibliography entry in the paper stays anonymous.
 
 ```bibtex
-@article{anukulana2027donotdisturb,
+@inproceedings{donotdisturb2027,
   title={Do Not Disturb: When Plasticity Interventions Degrade Offline-to-Online Reinforcement Learning},
   author={Anonymous Authors},
-  journal={International Conference on Learning Representations (ICLR)},
+  booktitle={International Conference on Learning Representations},
   year={2027}
 }
 ```
 
----
-
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).

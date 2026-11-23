@@ -16,11 +16,20 @@ Protocol (FINAL-v1, complete — every cell records all of this):
   * atomic checkpointing with graceful intra-cell resume
 
 Trigger semantics (the ONLY difference between arms — see
-``should_apply_intervention``):
+``should_apply_intervention`` and the online loop):
   * none: never apply.
-  * fixed: apply whenever the shift is active.
-  * capacity_gate: apply only while the shift is active AND the gate is ON.
-  * m10ref: apply only while the shift is active AND last M10 strength > 0.
+  * fixed / redo / redo_periodic: apply on each gate evaluation once the
+    online step reaches the intervention phase (the shift step, or step
+    5,000 when the regime is ``none``).
+  * capacity_gate: apply only when the gate sets ``should_intervene``
+    (thresholds and refractory cooldown). The gate does not read the shift
+    label.
+  * m10ref: apply when the frozen M10 strength is positive.
+
+Optional ablation arguments (``probe_source``, ``recent_window``,
+``probe_size``, ``gate_operator``) default to the published protocol:
+uniform online-buffer probes of size 256 and shrink-and-perturb under the
+gate. The rank anchor remains the frozen offline probe.
 
 Observation-noise semantics: the transformed observation feeds BOTH the
 policy (next input) and the stored replay transition. Reward-scale affects
@@ -56,6 +65,7 @@ from adaptive_plasticity.distribution_shifts import (
     apply_reward_scale,
 )
 from adaptive_plasticity.interventions import apply_plasticity_intervention
+from adaptive_plasticity.probes import PROBE_SOURCES, sample_capacity_probe
 from adaptive_plasticity.iql import IQLAgent
 from adaptive_plasticity.m5 import (
     OnlineBuffer,
@@ -80,13 +90,14 @@ from adaptive_plasticity.reproducibility import (
 #: Frozen protocol identifier (recorded in every plan cell and run).
 PROTOCOL_VERSION: str = "final-v1"
 
-#: Regime -> intervention severity (sigma for obs_noise, scale for reward_scale).
+#: Confirmatory regimes. Actuator crippling is a separate stress shift and is
+#: not part of the 135-cell matrix.
 REGIME_SEVERITY: dict[str, float] = {
     "none": 0.0,
     "obs_noise": 0.1,
     "reward_scale": 0.5,
-    "actuator_cripple": 1.0,
 }
+ACTUATOR_CRIPPLE_SEVERITY: float = 1.0
 
 #: Offset isolating the observation-noise RNG stream from all other streams.
 NOISE_RNG_OFFSET: int = 7919
@@ -100,7 +111,15 @@ FINAL_ENVS: tuple[str, ...] = (
     "hopper-medium-v2",
     "walker2d-medium-v2",
 )
-FINAL_SHIFTS: tuple[str, ...] = ("none", "obs_noise", "reward_scale", "actuator_cripple")
+PRIMARY_SHIFTS: tuple[str, ...] = ("none", "obs_noise", "reward_scale")
+FINAL_SHIFTS: tuple[str, ...] = PRIMARY_SHIFTS + ("actuator_cripple",)
+
+
+def default_severity(shift: str) -> float:
+    """Severity recorded for a shift. Stress crippling is not a confirmatory regime."""
+    if shift == "actuator_cripple":
+        return ACTUATOR_CRIPPLE_SEVERITY
+    return REGIME_SEVERITY[shift]
 FINAL_CONTROLLERS: tuple[str, ...] = ("none", "fixed", "capacity_gate", "redo", "redo_periodic", "m10ref")
 FINAL_SEEDS: tuple[int, ...] = (0, 1, 2, 3, 4)
 
@@ -339,6 +358,10 @@ def run_final_cell(
     use_shared_offline_checkpoints: bool = True,
     offline_checkpoint_dir: str | Path = DEFAULT_CHECKPOINT_DIR,
     output_name: str | None = None,
+    probe_source: str = "online_buffer",
+    recent_window: int = 1024,
+    probe_size: int = 256,
+    gate_operator: str = "shrink_perturb",
 ) -> dict[str, Any]:
     """Run one factorial cell; write summary, metadata, telemetry, checkpoint."""
     t_start = time.time()
@@ -346,8 +369,18 @@ def run_final_cell(
         raise ValueError(f"Unknown controller {controller!r}")
     if shift not in FINAL_SHIFTS:
         raise ValueError(f"Unknown shift {shift!r}")
+    if probe_source not in PROBE_SOURCES:
+        raise ValueError(f"Unknown probe_source {probe_source!r}. Expected one of {PROBE_SOURCES}.")
+    if gate_operator not in ("shrink_perturb", "redo"):
+        raise ValueError(f"Unknown gate_operator {gate_operator!r}.")
+    if int(probe_size) < 1:
+        raise ValueError(f"probe_size must be positive, got {probe_size}.")
+    if int(recent_window) < 1:
+        raise ValueError(f"recent_window must be positive, got {recent_window}.")
+    probe_size = int(probe_size)
+    recent_window = int(recent_window)
     if severity is None:
-        severity = REGIME_SEVERITY[shift]
+        severity = default_severity(shift)
     severity = float(severity)
 
     os.environ["OMP_NUM_THREADS"] = "1"
@@ -391,7 +424,7 @@ def run_final_cell(
     noise_rng = np.random.RandomState(int(seed) + NOISE_RNG_OFFSET)
     probe_rng = np.random.RandomState(int(seed) + 9999)
     online_buf = OnlineBuffer(obs_dim=obs_dim, act_dim=act_dim)
-    probe = build_fixed_probe(offline_data["observations"], n=256, seed=seed)
+    probe = build_fixed_probe(offline_data["observations"], n=probe_size, seed=seed)
 
     # Pre-load offline dataset into GPU memory if on CUDA for zero-copy sampling
     offline_storage: dict[str, Any] = offline_data
@@ -597,15 +630,21 @@ def run_final_cell(
                     nominal_shift_step = int(shift_step)
                 intervention_phase = (online_step >= nominal_shift_step)
 
-                # Determine active probe (sampled uniformly from all online transitions up to current step)
-                if online_buf.count >= 256:
-                    probe_indices = probe_rng.choice(online_buf.count, size=256, replace=False)
-                    active_probe = torch.as_tensor(
-                        online_buf.observations[probe_indices],
-                        dtype=torch.float32, device=torch_device
-                    )
-                else:
-                    active_probe = probe
+                # Monitoring probe. The published source is a uniform draw from
+                # the online buffer (same RandomState.choice as before). The
+                # rank anchor captured above stays on the frozen offline probe.
+                active_probe, probe_meta = sample_capacity_probe(
+                    source=probe_source,
+                    offline_probe=probe,
+                    online_observations=online_buf.observations,
+                    online_count=int(online_buf.count),
+                    write_idx=int(online_buf.idx),
+                    max_size=int(online_buf.max_size),
+                    probe_size=probe_size,
+                    recent_window=recent_window,
+                    rng=probe_rng,
+                    device=torch_device,
+                )
                 offline_probe = probe
 
                 if controller == "capacity_gate":
@@ -624,13 +663,17 @@ def run_final_cell(
                         rec["offline_rho"] = float(off_rank / rank_anchor) if (not math.isnan(rank_anchor) and rank_anchor > 0) else 1.0
                     rec["online_dormancy"] = float(rec["dormancy"])
                     rec["online_rho"] = float(rec["rho"])
+                    rec["probe_source"] = probe_meta["probe_source"]
+                    rec["probe_fallback"] = probe_meta["fallback"]
+                    rec["probe_pool_size"] = probe_meta["n_pool"]
+                    rec["gate_operator"] = gate_operator
 
                     # Autonomous capacity gate: triggers strictly when should_intervene is True (cooldown respected)
                     if rec.get("should_intervene", False):
                         w_before = next(agent.critic.parameters()).detach().clone()
                         apply_plasticity_intervention(
                             agent,
-                            intervention_type="shrink_perturb",
+                            intervention_type=gate_operator,
                             severity=gate.config.active_severity,
                             shrink=0.1,
                             probe_batch=active_probe,
@@ -771,6 +814,10 @@ def run_final_cell(
                 "rho_off": gate.config.rho_off,
                 "active_severity": gate.config.active_severity,
                 "cooldown_steps": gate.config.cooldown_steps,
+                "gate_operator": gate_operator,
+                "probe_source": probe_source,
+                "recent_window": recent_window,
+                "probe_size": probe_size,
             },
             "n_evaluations": gate.n_evaluations,
             "n_interventions": gate.n_interventions,
@@ -808,6 +855,10 @@ def run_final_cell(
         "severity": severity,
         "warmup_requested": int(warmup_updates),
         "device_requested": device,
+        "probe_source": probe_source,
+        "recent_window": recent_window,
+        "probe_size": probe_size,
+        "gate_operator": gate_operator,
     })
     summary: dict[str, Any] = {
         "output_name": out_name,
@@ -818,6 +869,10 @@ def run_final_cell(
         "shift_step": active_shift_step,
         "severity": severity,
         "seed": int(seed),
+        "probe_source": probe_source,
+        "recent_window": recent_window,
+        "probe_size": probe_size,
+        "gate_operator": gate_operator,
         "online_steps": online_step,
         "update_steps": update_step,
         "applied_intervention_steps": applied_count,

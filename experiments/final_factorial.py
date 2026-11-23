@@ -60,6 +60,7 @@ from adaptive_plasticity.final_runner import (
     FINAL_ENVS,
     FINAL_SEEDS,
     FINAL_SHIFTS,
+    PRIMARY_SHIFTS,
     PRIMARY_CONTROLLERS,
     REFERENCE_CONTROLLERS,
     REFERENCE_ENVS,
@@ -185,7 +186,7 @@ def build_plan(
     seeds=FINAL_SEEDS,
     controllers=DEFAULT_CONTROLLERS,
     envs=FINAL_ENVS,
-    shifts=FINAL_SHIFTS,
+    shifts=PRIMARY_SHIFTS,
     device: str = "cuda",
 ) -> list[dict]:
     """Enumerate a factorial plan; every cell carries the full protocol.
@@ -234,7 +235,7 @@ def build_plan(
 def build_primary_plan(*, device: str = "cuda") -> list[dict]:
     """Approved 135-cell primary matrix (m10ref excluded by design)."""
     plan = build_plan(seeds=FINAL_SEEDS, controllers=PRIMARY_CONTROLLERS,
-                      envs=FINAL_ENVS, shifts=FINAL_SHIFTS, device=device)
+                      envs=FINAL_ENVS, shifts=PRIMARY_SHIFTS, device=device)
     assert len(plan) == 135, f"primary plan must be 135 cells, got {len(plan)}"
     assert "m10ref" not in {c["controller"] for c in plan}
     return plan
@@ -243,7 +244,7 @@ def build_primary_plan(*, device: str = "cuda") -> list[dict]:
 def build_reference_plan(*, device: str = "cuda") -> list[dict]:
     """Approved 15-cell M10-reference plan (halfcheetah only, m10ref only)."""
     plan = build_plan(seeds=FINAL_SEEDS, controllers=REFERENCE_CONTROLLERS,
-                      envs=REFERENCE_ENVS, shifts=FINAL_SHIFTS, device=device)
+                      envs=REFERENCE_ENVS, shifts=PRIMARY_SHIFTS, device=device)
     assert len(plan) == 15, f"reference plan must be 15 cells, got {len(plan)}"
     return plan
 
@@ -455,12 +456,17 @@ def execute_plan(plan, outdir, *, runner=None, manifest_prefix: str = "FINAL",
         write_manifest(summaries, outdir, prefix=manifest_prefix)
         return summaries
 
+    # Real cells use a process pool. Mocks and functions defined inside tests
+    # stay in-process: a process pool cannot pickle them.
+    runner_type = type(runner)
     is_mock = (
-        "mock" in type(runner).__module__
-        or "unittest.mock" in str(type(runner))
+        "mock" in getattr(runner_type, "__module__", "")
+        or "unittest.mock" in str(runner_type)
         or getattr(runner, "_mock_name", None) is not None
+        or runner_type.__name__ in {"MagicMock", "Mock", "AsyncMock"}
     )
-    pool_cls = ThreadPoolExecutor if is_mock else ProcessPoolExecutor
+    local_fn = "<locals>" in str(getattr(runner, "__qualname__", ""))
+    pool_cls = ThreadPoolExecutor if (is_mock or local_fn) else ProcessPoolExecutor
     first_failure: BaseException | None = None
     with pool_cls(max_workers=workers) as pool:
         future_to_pos: dict = {}
@@ -605,10 +611,10 @@ def main(argv=None) -> None:
     plan = build_plan(seeds=seeds, controllers=controllers, device=args.device)
     reference_plan = build_reference_plan(device=args.device)
     print(f"Primary plan: {len(plan)} cells "
-          f"({len(FINAL_ENVS)} envs x {len(FINAL_SHIFTS)} shifts x "
+          f"({len(FINAL_ENVS)} envs x {len(PRIMARY_SHIFTS)} shifts x "
           f"{len(controllers)} ctrls x {len(seeds)} seeds)")
     print(f"Reference plan: {len(reference_plan)} cells "
-          f"({len(REFERENCE_ENVS)} envs x {len(FINAL_SHIFTS)} shifts x "
+          f"({len(REFERENCE_ENVS)} envs x {len(PRIMARY_SHIFTS)} shifts x "
           f"{len(REFERENCE_CONTROLLERS)} ctrls x {len(FINAL_SEEDS)} seeds)")
     print(f"Total: {len(plan) + len(reference_plan)} runs")
     outdir.mkdir(parents=True, exist_ok=True)

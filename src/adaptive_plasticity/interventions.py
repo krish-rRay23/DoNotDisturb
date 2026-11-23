@@ -124,13 +124,19 @@ def redo_recycle_linear_layer(
     optimizer_prev: torch.optim.Optimizer | None = None,
     optimizer_next: torch.optim.Optimizer | None = None,
 ) -> int:
-    """Recycle dormant neurons between consecutive linear layers (Sokar et al., 2023).
+    """Recycle low-activation units between consecutive linear layers (Sokar et al., 2023).
 
-    For dormant unit indices i in hidden layer:
-    1. Re-initialize incoming weights linear_prev.weight[i, :] with Kaiming uniform.
-    2. Reset incoming bias linear_prev.bias[i] to 0.
-    3. Zero outgoing weights linear_next.weight[:, i] = 0.
-    4. Reset Adam moments for modified parameters.
+    For each selected unit:
+    1. Re-initialize incoming weights with Kaiming uniform.
+    2. Reset the incoming bias to 0.
+    3. Zero outgoing weights.
+    4. Reset Adam moments for the modified parameter slices.
+
+    Zeroing the outgoing weights leaves the forward map unchanged only when
+    that unit's activation is already zero. Callers select units with a
+    relative activation threshold, so units with a small positive activation
+    lose that contribution. The operator is therefore an approximate,
+    low-disruption reset, not an identity map.
     """
     if dormant_indices.numel() == 0:
         return 0
@@ -155,7 +161,7 @@ def redo_recycle_linear_layer(
 
         reset_optimizer_state_for_param(optimizer_prev, linear_prev.weight, mask=idx)
 
-        # 3. Zero outgoing weights to preserve function output at reset moment
+        # 3. Zero outgoing weights. Exact only if this unit was already silent.
         linear_next.weight.data[:, idx] = 0.0
         # For outgoing weight matrix of shape [out_dim, in_dim], column idx is modified
         col_mask = torch.zeros_like(linear_next.weight.data, dtype=torch.bool)

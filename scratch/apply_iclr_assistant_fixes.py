@@ -1,3 +1,10 @@
+raise SystemExit(
+    "Historical manuscript editor disabled. It still encodes the superseded "
+    "zero-functional-shift wording for ReDo. Edit "
+    "research_paper/iclr2027/iclr2027_conference.tex directly. ReDo is an "
+    "approximate, low-disruption reset."
+)
+
 """Update scratch/generate_final_manuscript.py to incorporate all ICLR Paper Assistant feedback points:
 
 1. Correct all bibliography author lists, titles, and venues (done in .bib).

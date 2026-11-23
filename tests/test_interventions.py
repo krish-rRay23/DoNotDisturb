@@ -77,6 +77,28 @@ def test_redo_recycling_preserves_output_initially():
     assert torch.isfinite(out_after).all()
 
 
+def test_redo_relative_threshold_is_not_an_identity():
+    """A unit that still fires loses its outgoing contribution when recycled."""
+    torch.manual_seed(0)
+    incoming = nn.Linear(4, 8)
+    outgoing = nn.Linear(8, 2)
+    with torch.no_grad():
+        incoming.weight.zero_()
+        incoming.bias.zero_()
+        incoming.weight[0, :] = 0.05
+        outgoing.weight.zero_()
+        outgoing.bias.zero_()
+        outgoing.weight[:, 0] = 1.0
+    inputs = torch.ones(6, 4)
+    before = outgoing(torch.relu(incoming(inputs)))
+    assert torch.all(before.abs() > 0)
+    redo_recycle_linear_layer(incoming, outgoing, torch.tensor([0]))
+    after = outgoing(torch.relu(incoming(inputs)))
+    assert torch.all(outgoing.weight[:, 0] == 0)
+    assert not torch.allclose(before, after)
+    assert torch.allclose(after, torch.zeros_like(after), atol=1e-6)
+
+
 def test_apply_plasticity_intervention_on_agent():
     """Verify high-level apply_plasticity_intervention updates agent networks and target critic."""
     agent = IQLAgent(obs_dim=17, act_dim=6, device="cpu")
