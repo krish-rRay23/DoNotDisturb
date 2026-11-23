@@ -44,6 +44,7 @@ def test_local_summary_is_not_rewritten_as_manuscript(tmp_path: Path):
             {
                 "dataset_id": "halfcheetah-medium-v2",
                 "controller": "capacity_gate",
+                "shift": "actuator_cripple",
                 "seed": 1,
                 "normalized": [1.0, 2.5],
             }
@@ -62,3 +63,42 @@ def test_local_summary_is_not_rewritten_as_manuscript(tmp_path: Path):
     assert row["manuscript_score"] is None
     assert row["status"] == "local_summary_present"
     assert row["in_manuscript"] is False
+
+
+def test_non_stress_summary_does_not_match_the_actuator_table():
+    ordinary = {
+        "dataset_id": "halfcheetah-medium-v2",
+        "controller": "capacity_gate",
+        "shift": "none",
+        "seed": 0,
+        "normalized": [99.0],
+    }
+    stress = {
+        "dataset_id": "halfcheetah-medium-v2",
+        "controller": "capacity_gate",
+        "shift": "actuator_cripple",
+        "seed": 0,
+        "normalized": [8.58],
+    }
+    # Later non-stress file must not overwrite the actuator summary.
+    report = coverage_report([stress, ordinary], seeds=(0,))
+    row = next(
+        item
+        for item in report["rows"]
+        if item["dataset_id"] == "halfcheetah-medium-v2"
+        and item["controller"] == "capacity_gate"
+        and item["seed"] == 0
+    )
+    assert row["local_score"] == 8.58
+    assert row["matches_manuscript_rounding"] is True
+
+    only_ordinary = coverage_report([ordinary], seeds=(0,))
+    ordinary_row = next(
+        item
+        for item in only_ordinary["rows"]
+        if item["dataset_id"] == "halfcheetah-medium-v2"
+        and item["controller"] == "capacity_gate"
+        and item["seed"] == 0
+    )
+    assert ordinary_row["local_score"] is None
+    assert ordinary_row["present"] is False

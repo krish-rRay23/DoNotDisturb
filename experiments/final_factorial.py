@@ -65,6 +65,7 @@ from adaptive_plasticity.final_runner import (
     REFERENCE_CONTROLLERS,
     REFERENCE_ENVS,
     REGIME_SEVERITY,
+    default_severity,
     final_output_name,
     final_protocol,
     run_final_cell,
@@ -151,7 +152,7 @@ def build_pilot_plan(*, device: str = "cuda") -> list[dict]:
         for shift in PILOT_SHIFTS:
             for ctrl in PILOT_CONTROLLERS:
                 for seed in PILOT_SEEDS:
-                    severity = REGIME_SEVERITY[shift]
+                    severity = default_severity(shift)
                     shift_step = 0 if shift == "none" else PILOT_SHIFT_STEP
                     plan.append({
                         "dataset_id": env,
@@ -211,7 +212,7 @@ def build_plan(
         for shift in shifts:
             for ctrl in ctrls:
                 for seed in seeds:
-                    severity = REGIME_SEVERITY[shift]
+                    severity = default_severity(shift)
                     shift_step = 0 if shift == "none" else protocol["shift_step"]
                     plan.append({
                         "dataset_id": env,

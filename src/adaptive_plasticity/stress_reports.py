@@ -74,6 +74,16 @@ def extension_cells(seeds: tuple[int, ...] = (0, 1, 2, 3, 4)) -> list[dict[str, 
     return cells
 
 
+def _summary_shift(summary: dict[str, Any]) -> str | None:
+    """Shift recorded on a run summary. Protocol is only a fallback."""
+    shift = summary.get("shift")
+    if shift is None and isinstance(summary.get("protocol"), dict):
+        shift = summary["protocol"].get("shift")
+    if shift is None:
+        return None
+    return str(shift)
+
+
 def _final_normalized(summary: dict[str, Any]) -> float | None:
     scores = summary.get("normalized")
     if isinstance(scores, list) and scores:
@@ -111,21 +121,26 @@ def coverage_report(
     Cells the manuscript does not report stay ``not_yet_run`` even if a local
     file is absent.
     """
-    by_key: dict[tuple[str, str, int], dict[str, Any]] = {}
+    by_key: dict[tuple[str, str, str, int], dict[str, Any]] = {}
     for summary in summaries:
         dataset_id = summary.get("dataset_id") or summary.get("environment")
         controller = summary.get("controller")
         seed = summary.get("seed")
-        if dataset_id is None or controller is None or seed is None:
+        shift = _summary_shift(summary)
+        if dataset_id is None or controller is None or seed is None or shift is None:
             continue
-        by_key[(str(dataset_id), str(controller), int(seed))] = summary
+        # The manuscript table is the actuator-crippling study. A same-seed
+        # confirmatory run must not be scored against that table.
+        if shift != "actuator_cripple":
+            continue
+        by_key[(str(dataset_id), str(controller), shift, int(seed))] = summary
 
     rows: list[dict[str, Any]] = []
     n_present = 0
     n_match = 0
     n_mismatch = 0
     for cell in extension_cells(seeds):
-        key = (cell["dataset_id"], cell["controller"], cell["seed"])
+        key = (cell["dataset_id"], cell["controller"], cell["shift"], cell["seed"])
         summary = by_key.get(key)
         local_score = _final_normalized(summary) if summary is not None else None
         present = local_score is not None

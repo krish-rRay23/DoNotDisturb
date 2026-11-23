@@ -28,6 +28,11 @@ Aligned the public text with the manuscript in `research_paper/iclr2027/iclr2027
 
 A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJOCO_GL=glfw`) finished. Logs are under `results/ablation_pilot/`, which is gitignored. Intervention counts from that short, barely trained run are launch telemetry only. They are not manuscript findings and are not comparable to the 25,000-step tables.
 
+### Review fixes
+
+- `build_plan(..., shifts=("actuator_cripple",))` uses `default_severity`, so the stress shift keeps severity 1.0. `REGIME_SEVERITY` stays the three confirmatory regimes.
+- Stress coverage matches summaries on environment, controller, seed, and `shift == actuator_cripple`. A same-seed confirmatory run is not compared with the actuator table.
+
 ### Not run
 
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).
