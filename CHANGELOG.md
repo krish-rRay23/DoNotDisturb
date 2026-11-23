@@ -113,6 +113,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `make check` runs `experiments/check_claim_coverage.py`. Every decimal and every `10^{n}` power printed in the manuscript must appear under a claim id in `docs/claim_numeric_tokens.yaml`. A TeX dimension is not a claim. The check does not recompute a score. `protocol_settings` holds controller and optimizer settings, not scores.
 
+### Quickstart
+
+- The README quickstart runs `make check` (tests, plan dry-run, hash check, public-claim check, and claim-coverage) and points the four confirm-gated GPU runs at `docs/run_guide.md`. No manuscript number was added.
+
 ### Run guide
 
 - `docs/run_guide.md` lists the four confirm-gated full runs (`CONFIRM-FINAL-150`, `CONFIRM-STRESS-24`, `CONFIRM-STABLE-9`, `CONFIRM-ABLATION-FULL`) and the commands that rebuild tables and figures from their outputs. No run was launched. No manuscript number was added.
