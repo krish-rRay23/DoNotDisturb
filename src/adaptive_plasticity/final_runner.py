@@ -106,6 +106,15 @@ NOISE_RNG_OFFSET: int = 7919
 #: (135 primary + 15 M10-reference cells).
 CONFIRM_TOKEN: str = "CONFIRM-FINAL-150"
 
+#: Gate settings passed into the confirmatory and stress runs.
+#: ``CapacityGateConfig`` class defaults for ``dorm_off`` and ``cooldown_steps``
+#: are not these values. ``final_protocol`` still reports the class defaults.
+PUBLISHED_GATE: dict[str, float | int] = {
+    "active_severity": 0.1,
+    "cooldown_steps": 3000,
+    "dorm_off": 0.08,
+}
+
 FINAL_ENVS: tuple[str, ...] = (
     "halfcheetah-medium-v2",
     "hopper-medium-v2",
@@ -459,9 +468,9 @@ def run_final_cell(
 
     # Intervention severity is strictly decoupled from shift severity (fixed at 0.1)
     gate = CapacityGateController(config=(gate_config or CapacityGateConfig(
-        active_severity=0.1,
-        cooldown_steps=3000,
-        dorm_off=0.08,
+        active_severity=float(PUBLISHED_GATE["active_severity"]),
+        cooldown_steps=int(PUBLISHED_GATE["cooldown_steps"]),
+        dorm_off=float(PUBLISHED_GATE["dorm_off"]),
     )))
     m10 = None
     m10_strength = 0.0
