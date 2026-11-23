@@ -15,6 +15,13 @@ def test_manuscript_refs_labels_and_figures_resolve():
     assert problems == []
 
 
+def test_sibling_environments_on_one_line_are_balanced():
+    tex = r"\begin{figure}x\end{figure}\begin{table}y\end{table}"
+    assert check_manuscript(tex) == []
+    mismatch = check_manuscript(r"\begin{table}x\end{figure}")
+    assert any("does not close" in item for item in mismatch)
+
+
 def test_a_missing_label_and_a_label_before_its_caption_fail():
     tex = r"""
 \begin{table}

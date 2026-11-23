@@ -14,8 +14,7 @@ from pathlib import Path
 __all__ = ["check_manuscript", "log_problems"]
 
 _COMMENT = re.compile(r"(?<!\\)%.*")
-_BEGIN = re.compile(r"\\begin\{([^}]+)\}")
-_END = re.compile(r"\\end\{([^}]+)\}")
+_DELIM = re.compile(r"\\(begin|end)\{([^}]+)\}")
 _LABEL = re.compile(r"\\label\{([^}]+)\}")
 _REF = re.compile(r"\\(?:auto|eq|page|[Cc]|sub)?ref\{([^}]+)\}")
 _CITE = re.compile(r"\\cite[a-zA-Z*]*\{([^}]+)\}")
@@ -44,11 +43,11 @@ def check_manuscript(
 
     stack: list[tuple[str, int]] = []
     for line_number, line in enumerate(source.splitlines(), 1):
-        for match in _BEGIN.finditer(line):
-            stack.append((match.group(1), line_number))
-        for match in _END.finditer(line):
-            name = match.group(1)
-            if not stack or stack[-1][0] != name:
+        for match in _DELIM.finditer(line):
+            kind, name = match.group(1), match.group(2)
+            if kind == "begin":
+                stack.append((name, line_number))
+            elif not stack or stack[-1][0] != name:
                 problems.append(
                     f"\\end{{{name}}} at line {line_number} does not close the open environment."
                 )
