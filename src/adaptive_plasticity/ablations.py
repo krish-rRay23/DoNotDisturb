@@ -22,6 +22,14 @@ STUDY_FILES: tuple[str, ...] = (
 PILOT_CONFIRM_TOKEN = "CONFIRM-ABLATION-PILOT"
 FULL_CONFIRM_TOKEN = "CONFIRM-ABLATION-FULL"
 
+#: Hopper seed 0 cells that exercise every monitoring source at the pilot budget.
+PROBE_PILOT_CELL_IDS: tuple[str, ...] = (
+    "offline_fixed",
+    "online_buffer",
+    "recent_window_1024",
+    "recent_window_256",
+)
+
 #: Budgets for a launch check. These are not manuscript runs.
 PILOT_BUDGET: dict[str, int] = {
     "online_steps": 2_000,
@@ -43,6 +51,8 @@ __all__ = [
     "ablation_output_name",
     "select_cells",
     "apply_pilot_budget",
+    "PROBE_PILOT_CELL_IDS",
+    "select_probe_pilot",
 ]
 
 
@@ -154,6 +164,29 @@ def select_cells(cells: list[dict[str, Any]], *, pilot: bool, study: str | None 
     if pilot:
         selected = [cell for cell in selected if cell["include_in_pilot"]]
     return selected
+
+
+def select_probe_pilot(cells: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Four hopper seed-0 cells, one for each probe-distribution row.
+
+    ``online_buffer`` is included so the pilot has the published source next
+    to ``offline_fixed`` and the two recent windows. The mixed 7-cell pilot
+    stays unchanged. Every returned cell still has status ``not_yet_run``
+    until a run finishes, and the budget is the short pilot budget.
+    """
+    wanted = set(PROBE_PILOT_CELL_IDS)
+    selected = [
+        cell
+        for cell in cells
+        if cell["study"] == "probe_distributions"
+        and cell["dataset_id"] == "hopper-medium-v2"
+        and int(cell["seed"]) == 0
+        and cell["cell_id"] in wanted
+    ]
+    found = {cell["cell_id"] for cell in selected}
+    if found != wanted:
+        raise ValueError(f"Probe pilot cells missing {sorted(wanted - found)}.")
+    return [apply_pilot_budget(cell) for cell in selected]
 
 
 def apply_pilot_budget(cell: dict[str, Any]) -> dict[str, Any]:

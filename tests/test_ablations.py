@@ -9,6 +9,7 @@ from adaptive_plasticity.ablations import (
     apply_pilot_budget,
     load_all_studies,
     select_cells,
+    select_probe_pilot,
 )
 
 
@@ -75,3 +76,23 @@ def test_pilot_is_short_and_covers_each_new_path():
     assert ("cooldown", "cooldown_0") in ids
     assert ("gate_operator", "redo") in ids
     assert PILOT_CONFIRM_TOKEN != FULL_CONFIRM_TOKEN
+
+
+def test_probe_pilot_covers_every_source_at_the_short_budget():
+    cells = select_probe_pilot(load_all_studies())
+    assert len(cells) == 4
+    assert {cell["probe_source"] for cell in cells} == {
+        "offline_fixed",
+        "online_buffer",
+        "recent_window",
+    }
+    assert {cell["cell_id"] for cell in cells} == {
+        "offline_fixed",
+        "online_buffer",
+        "recent_window_1024",
+        "recent_window_256",
+    }
+    assert {cell["dataset_id"] for cell in cells} == {"hopper-medium-v2"}
+    assert {cell["seed"] for cell in cells} == {0}
+    assert {cell["online_steps"] for cell in cells} == {PILOT_BUDGET["online_steps"]}
+    assert {cell["status"] for cell in cells} == {"not_yet_run"}

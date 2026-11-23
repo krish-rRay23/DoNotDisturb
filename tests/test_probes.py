@@ -98,6 +98,67 @@ def test_recent_indices_wrap_when_the_ring_is_full():
     np.testing.assert_array_equal(indices, np.array([4, 0, 1]))
 
 
+def test_recent_window_falls_back_when_the_buffer_is_empty():
+    offline = torch.ones((4, 2))
+    rng = np.random.RandomState(5)
+    state = rng.get_state()
+    probe, meta = sample_capacity_probe(
+        source="recent_window",
+        offline_probe=offline,
+        online_observations=np.zeros((10, 2), dtype=np.float32),
+        online_count=0,
+        write_idx=0,
+        max_size=10,
+        probe_size=4,
+        recent_window=8,
+        rng=rng,
+    )
+    assert probe is offline
+    assert meta["fallback"] == "offline_fixed"
+    assert meta["n_pool"] == 0
+    assert rng.get_state()[1][:5].tolist() == state[1][:5].tolist()
+
+
+def test_recent_window_samples_with_replacement_when_the_slice_is_short():
+    observations = np.arange(20, dtype=np.float32).reshape(20, 1)
+    probe, meta = sample_capacity_probe(
+        source="recent_window",
+        offline_probe=torch.zeros((4, 1)),
+        online_observations=observations,
+        online_count=20,
+        write_idx=20,
+        max_size=20,
+        probe_size=8,
+        recent_window=3,
+        rng=np.random.RandomState(2),
+        device="cpu",
+    )
+    assert probe.shape == (8, 1)
+    assert meta["replace"] is True
+    assert meta["n_pool"] == 3
+    values = set(probe.numpy().reshape(-1).tolist())
+    assert values <= {17.0, 18.0, 19.0}
+
+
+def test_unknown_probe_source_is_rejected():
+    try:
+        sample_capacity_probe(
+            source="latest_only",
+            offline_probe=torch.zeros((2, 1)),
+            online_observations=np.zeros((4, 1), dtype=np.float32),
+            online_count=4,
+            write_idx=4,
+            max_size=4,
+            probe_size=2,
+            recent_window=2,
+            rng=np.random.RandomState(0),
+        )
+    except ValueError as exc:
+        assert "latest_only" in str(exc)
+    else:
+        raise AssertionError("unknown probe source should raise")
+
+
 def test_recent_window_is_deterministic():
     observations = np.random.RandomState(0).randn(40, 3).astype(np.float32)
     kwargs = dict(
