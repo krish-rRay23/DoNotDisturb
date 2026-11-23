@@ -91,6 +91,12 @@ python experiments/dry_run_plans.py
 
 `--plans-only` skips the file check, which is what the unit test uses when the HDF5 files are not checked out.
 
+`configs/placeholders/halfcheetah_medium_replay.yaml` names an extra locomotion file that is in the registry and not in the primary plan. `configs/placeholders/antmaze_umaze.yaml` names AntMaze, which is not registered and has no environment adapter. Neither is runnable:
+
+```bash
+python -c "from adaptive_plasticity.placeholders import refuse_placeholder; refuse_placeholder('antmaze_umaze')"
+```
+
 ## Manuscript training commands (long; not launched here)
 
 These are the published protocols. They are full MuJoCo runs (25,000 offline updates and 25,000 online steps per cell, except where the harness says otherwise). Do not start them unless you intend to wait for the full matrix.

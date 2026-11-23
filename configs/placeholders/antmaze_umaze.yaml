@@ -1,0 +1,15 @@
+# Broader-domain placeholder. AntMaze is not wired in this repository.
+name: antmaze_umaze
+status: not_yet_run
+executable: false
+dataset_id: antmaze-umaze-v2
+environment: null
+domain: antmaze
+in_primary_matrix: false
+in_ablation_plan: false
+why_not_run: >
+  antmaze-umaze-v2 is not in the dataset registry, there is no AntMaze
+  environment adapter, and the IQL agent here is the continuous-control
+  locomotion agent. A run needs the D4RL AntMaze file, a goal-reaching
+  environment, and a decision about whether the same gate applies to that
+  action space. Nothing has been run. Do not cite it.
