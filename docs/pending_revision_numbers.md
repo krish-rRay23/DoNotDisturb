@@ -1,6 +1,8 @@
 # Pending revision numbers
 
-Searched on 2026-11-23, after pull request #1 merged into `main` (`17ecdc8`).
+The three claims below are still not applied. Reproducibility checks must not copy them into the paper, the README, or `REPRODUCIBILITY.md`.
+
+Searched on 2026-11-23, after pull request #1 merged into `main` (`17ecdc8`). The public surfaces at `main` `33bd694` still do not contain these figures.
 
 ## What was searched
 

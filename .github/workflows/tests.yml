@@ -30,8 +30,9 @@ jobs:
       - name: Install pinned dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Pytest without offline datasets
+      - name: Reproducibility check
         env:
           # glfw plus Xvfb. egl is not available on this headless runner.
+          # The Makefile also defaults MUJOCO_GL to glfw.
           MUJOCO_GL: glfw
-        run: xvfb-run -a python -m pytest tests/ -q -m "not needs_offline_data"
+        run: xvfb-run -a make check
