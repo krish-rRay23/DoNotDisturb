@@ -6,3 +6,5 @@
 
 `run_guide.md` is the GPU sequence for the four confirm-gated matrices and for regenerating tables and figures from their outputs. It does not launch those runs.
 
+`blockers.md` lists what is still blocked outside this repository: revised manuscript numbers, the GPU runs, Cal-QL/PEX/RO2O code, and an AntMaze adapter. Each section says what would unblock it. It does not add a score.
+
