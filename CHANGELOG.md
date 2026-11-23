@@ -45,6 +45,11 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `experiments/check_public_claims.py` checks that the README, the manuscript, and the HTML preview still contain the tokens transcribed in `docs/manuscript_claims.yaml`. It does not recompute them. The unverified revision figures `0.9915`, `1.6501`, and `40.37` are forbidden on those three surfaces. The HTML preview now also states the paired-\(t\) statistic and the bootstrap interval on the mean paired difference, both already in the manuscript.
 
+### Figures from logs
+
+- `src/adaptive_plasticity/figures_from_logs.py` writes a bar chart of means from supplied summaries and a `plotted.json` that lists those means. No scores means no file. The output is labeled as not a manuscript figure.
+- `experiments/reproduce_all_tables_and_figures.py` no longer creates an output directory on import, no longer paints the stress bars from manuscript constants, and no longer fills a missing CapacityGate stress cell with 8.58 or 7.23. An empty IQM is NaN rather than 0. Learning-curve and stress figures are skipped when their logs are absent.
+
 ### Dataset hash check
 
 - `python -m adaptive_plasticity.datasets --check-hash <id>` compares a local raw file with the sha256 in `data/manifests/<id>.json`. It does not download and it does not rewrite the manifest. Exit 1 is a mismatch. Exit 2 means the file or the recorded sha256 is absent.
