@@ -45,7 +45,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `experiments/dry_run_plans.py` launches the primary, stress, stress-extension, stable, and ablation planners without `--execute`, and reports whether the three primary HDF5 files are present. It does not download or commit them.
 - `REPRODUCIBILITY.md` notes that `--acquire` rewrites the tracked manifest and should be restored when the sha256 is unchanged.
-- The same dry-run also reports the three registered medium-replay files. They are not required by the published runners, so a missing replay file does not fail the command. `--require-registry` does. `antmaze-umaze-v2` is not in the registry. The replay files were acquired; their sha256 values matched the committed manifests, the manifests were restored, and the HDF5 files were not committed.
+- The same dry-run also reports the three registered medium-replay files. They are not required by the published runners, so a missing replay file does not fail the command. `--require-registry` does. A missing-file message prints one `--acquire` command per id, because the dataset CLI accepts a single id. `antmaze-umaze-v2` is not in the registry. The replay files were acquired; their sha256 values matched the committed manifests, the manifests were restored, and the HDF5 files were not committed.
 
 ### Probe pilot
 

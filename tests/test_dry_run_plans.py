@@ -19,6 +19,17 @@ def test_primary_dataset_ids_are_the_three_locomotion_suites():
     )
 
 
+def test_acquire_instructions_are_one_command_per_dataset():
+    lines = dry_run_plans.acquire_command_lines(
+        ("hopper-medium-v2", "walker2d-medium-replay-v2")
+    )
+    assert lines == [
+        "python -m adaptive_plasticity.datasets --acquire hopper-medium-v2",
+        "python -m adaptive_plasticity.datasets --acquire walker2d-medium-replay-v2",
+    ]
+    assert all(line.count("--acquire") == 1 for line in lines)
+
+
 def test_optional_registry_ids_are_the_medium_replay_files():
     assert dry_run_plans.optional_registry_datasets() == (
         "halfcheetah-medium-replay-v2",

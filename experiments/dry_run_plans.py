@@ -46,6 +46,14 @@ def missing_primary_datasets(root: str | Path = ".") -> list[str]:
     return missing_dataset_ids(PRIMARY_DATASETS, root)
 
 
+def acquire_command_lines(dataset_ids) -> list[str]:
+    """One ``--acquire`` invocation per id. The CLI accepts a single id."""
+    return [
+        f"python -m adaptive_plasticity.datasets --acquire {dataset_id}"
+        for dataset_id in dataset_ids
+    ]
+
+
 def _capture(fn, argv: list[str]) -> str:
     buffer = io.StringIO()
     with redirect_stdout(buffer):
@@ -118,10 +126,10 @@ def main(argv: list[str] | None = None) -> None:
         needed = list(missing)
         if args.require_registry:
             needed.extend(dataset_id for dataset_id in optional_missing if dataset_id not in needed)
-        joined = " ".join(needed)
+        commands = "\n".join(f"  {line}" for line in acquire_command_lines(needed))
         print(
             "Missing raw files. Acquire each one, then restore an unchanged manifest:\n"
-            f"  python -m adaptive_plasticity.datasets --acquire {joined}\n"
+            f"{commands}\n"
             "  git checkout -- data/manifests/<id>.json",
             file=sys.stderr,
         )
