@@ -25,19 +25,29 @@ EMPTY_BANNER = "% No scored rows. No table was rendered."
 
 
 def normalize_summaries(summaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Copy M5 records so ``controller_type`` is visible as ``controller``.
+    """Copy records so M5 field names are visible to the summary aggregator.
 
-    A record that already has ``controller`` keeps that field. Factorial
-    summaries use ``controller``; M5 summaries use ``controller_type``.
+    Factorial summaries use ``controller`` and ``shift``. M5 summaries use
+    ``controller_type`` and ``shift_type``. A field that is already set is
+    kept. A missing or empty ``shift_type`` is the M5 no-shift case, labeled
+    ``-noshift``, which is the token ``m5.py`` already uses for that case.
     """
     normalized: list[dict[str, Any]] = []
     for summary in summaries:
+        copied: dict[str, Any] | None = None
+
+        def ensure() -> dict[str, Any]:
+            nonlocal copied
+            if copied is None:
+                copied = dict(summary)
+            return copied
+
         if summary.get("controller") is None and summary.get("controller_type") is not None:
-            copied = dict(summary)
-            copied["controller"] = summary["controller_type"]
-            normalized.append(copied)
-        else:
-            normalized.append(summary)
+            ensure()["controller"] = summary["controller_type"]
+        if summary.get("shift") is None and "shift_type" in summary:
+            shift_type = summary.get("shift_type")
+            ensure()["shift"] = "-noshift" if shift_type in (None, "") else shift_type
+        normalized.append(copied if copied is not None else summary)
     return normalized
 
 

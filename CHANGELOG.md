@@ -51,7 +51,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 ### LaTeX tables from logs
 
-- `experiments/render_latex_tables.py` writes a mean table and a seed table from supplied `summary.json` files. The numbers are the mean and the sample standard deviation of those scores, plus an IQM from `iqm_by_controller` on the same rows. No scored row means no numeric table. A one-score cell does not print a standard deviation. Duplicate identities are not averaged twice. M5 summaries are grouped by `controller_type` when `controller` is absent. Output from a fixture is labeled `SYNTHETIC FIXTURE` and is not a manuscript table.
+- `experiments/render_latex_tables.py` writes a mean table and a seed table from supplied `summary.json` files. The numbers are the mean and the sample standard deviation of those scores, plus an IQM from `iqm_by_controller` on the same rows. No scored row means no numeric table. A one-score cell does not print a standard deviation. Duplicate identities are not averaged twice. M5 summaries are grouped by `controller_type` when `controller` is absent, and by `shift_type` when `shift` is absent. A missing `shift_type` is the M5 no-shift case and is labeled `-noshift`, the token already used in `m5.py`. It is not dropped and it is not filled from the manuscript. Output from a fixture is labeled `SYNTHETIC FIXTURE` and is not a manuscript table.
 
 ### Figures from logs
 

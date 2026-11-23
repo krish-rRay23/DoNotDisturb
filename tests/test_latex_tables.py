@@ -98,6 +98,33 @@ def test_duplicate_identity_is_not_averaged_twice():
     assert "SYNTHETIC FIXTURE" not in rendered["mean_table"]
 
 
+def test_m5_shift_type_is_kept_including_the_no_shift_case():
+    shifted = {
+        "fixture": True,
+        "dataset_id": "fixture-env",
+        "controller_type": "adaptive",
+        "shift_type": "obs_noise",
+        "seed": 0,
+        "normalized": [2.0, 4.0],
+    }
+    unshifted = {
+        "fixture": True,
+        "dataset_id": "fixture-env",
+        "controller_type": "fixed",
+        "shift_type": None,
+        "seed": 1,
+        "normalized": [5.0],
+    }
+    rendered = build_tables([shifted, unshifted], fixture=True)
+    by_controller = {cell["controller"]: cell for cell in rendered["values"]["cells"]}
+    assert by_controller["adaptive"]["shift"] == "obs_noise"
+    assert by_controller["adaptive"]["mean"] == pytest.approx(4.0)
+    assert by_controller["fixed"]["shift"] == "-noshift"
+    assert by_controller["fixed"]["mean"] == pytest.approx(5.0)
+    assert r"-noshift" in rendered["mean_table"]
+    assert rendered["values"]["n_rows"] == 2
+
+
 def test_m5_controller_type_is_grouped_when_controller_is_absent():
     summary = _summary(None, [2.0, 4.0], controller_type="adaptive")
     rendered = build_tables([summary], fixture=True)
