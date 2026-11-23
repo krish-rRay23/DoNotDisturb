@@ -7,9 +7,9 @@
 export MUJOCO_GL ?= glfw
 PYTHON ?= python3
 
-.PHONY: check test dry-run hash-check claims
+.PHONY: check test dry-run hash-check claims claim-coverage
 
-check: test dry-run hash-check claims
+check: test dry-run hash-check claims claim-coverage
 
 test:
 	$(PYTHON) -m pytest tests/ -q -m "not needs_offline_data"
@@ -22,3 +22,6 @@ hash-check:
 
 claims:
 	$(PYTHON) experiments/check_public_claims.py
+
+claim-coverage:
+	$(PYTHON) experiments/check_claim_coverage.py

@@ -25,6 +25,7 @@ Figures named in `docs/pending_revision_numbers.md` are not rows here and are no
 | `pooled_stress_iqm` | Not Table tab:stress_results. Do not use this file for the stress means. | `none` | `results/stress_analysis/stress_iqm.json` | `not_the_manuscript_table` |
 | `ablation_grid` | Not in the manuscript tables. The 125-cell grid is not_yet_run. | `experiments/run_ablations.py` | `results/ablations` | `unverified` |
 | `short_pilots` | Not a manuscript claim. The 2,000-step hopper pilots are launch checks. | `experiments/run_ablations.py` | `results/ablation_pilot`<br>`results/probe_pilot` | `not_a_manuscript_result` |
+| `protocol_settings` | Method sections and Table tab:hyperparams. Thresholds, probe settings, and optimizer settings, not a reported score. | `src/adaptive_plasticity/final_runner.py` | `src/adaptive_plasticity/capacity_gate.py` | `not_a_manuscript_result` |
 
 ## Notes
 
@@ -39,3 +40,4 @@ Figures named in `docs/pending_revision_numbers.md` are not rows here and are no
 - `pooled_stress_iqm` (not_the_manuscript_table): REPRODUCIBILITY.md says this archive pools CapacityGate seeds the paper does not report.
 - `ablation_grid` (unverified): No full ablation log is a result in the paper.
 - `short_pilots` (not_a_manuscript_result): Pilot scores are not comparable to the 25,000-step tables and are not read here.
+- `protocol_settings` (not_a_manuscript_result): These decimals are the published controller and optimizer settings. They are not scores and are not read from a run log.

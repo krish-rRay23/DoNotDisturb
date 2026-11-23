@@ -132,6 +132,20 @@ CLAIMS: tuple[dict[str, Any], ...] = (
         "role": "not_manuscript",
         "note": "Pilot scores are not comparable to the 25,000-step tables and are not read here.",
     },
+    {
+        "claim_id": "protocol_settings",
+        "manuscript": (
+            "Method sections and Table tab:hyperparams. "
+            "Thresholds, probe settings, and optimizer settings, not a reported score."
+        ),
+        "script": "src/adaptive_plasticity/final_runner.py",
+        "logs": ("src/adaptive_plasticity/capacity_gate.py",),
+        "role": "not_manuscript",
+        "note": (
+            "These decimals are the published controller and optimizer settings. "
+            "They are not scores and are not read from a run log."
+        ),
+    },
 )
 
 
