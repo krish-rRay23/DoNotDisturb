@@ -41,6 +41,11 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `.github/workflows/tests.yml` runs pytest on pull requests and on `main`. `MUJOCO_GL=glfw` under Xvfb. Tests marked `needs_offline_data` are skipped so CI does not download datasets or run the short training cells that need them.
 
+### Dataset dry-run
+
+- `experiments/dry_run_plans.py` launches the primary, stress, stress-extension, stable, and ablation planners without `--execute`, and reports whether the three primary HDF5 files are present. It does not download or commit them.
+- `REPRODUCIBILITY.md` notes that `--acquire` rewrites the tracked manifest and should be restored when the sha256 is unchanged.
+
 ### Not run
 
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).

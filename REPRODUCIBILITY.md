@@ -72,7 +72,23 @@ python -m adaptive_plasticity.datasets --acquire halfcheetah-medium-v2
 python -m adaptive_plasticity.datasets --acquire walker2d-medium-v2
 ```
 
-Acquisition downloads a Wayback snapshot of the official D4RL file. If that host is unreachable, training cannot start. MuJoCo environments are `HalfCheetah-v5`, `Hopper-v5`, and `Walker2d-v5` via Gymnasium.
+Acquisition downloads a Wayback snapshot of the official D4RL file and rewrites `data/manifests/<id>.json` even when the file was already on disk. Raw HDF5 files are gitignored. If the sha256 is unchanged, restore the tracked manifest before committing:
+
+```bash
+git checkout -- data/manifests/hopper-medium-v2.json
+git checkout -- data/manifests/halfcheetah-medium-v2.json
+git checkout -- data/manifests/walker2d-medium-v2.json
+```
+
+If that host is unreachable, training cannot start. MuJoCo environments are `HalfCheetah-v5`, `Hopper-v5`, and `Walker2d-v5` via Gymnasium.
+
+Confirm the launchers and the three raw files without training:
+
+```bash
+python experiments/dry_run_plans.py
+```
+
+`--plans-only` skips the file check, which is what the unit test uses when the HDF5 files are not checked out.
 
 ## Manuscript training commands (long; not launched here)
 
