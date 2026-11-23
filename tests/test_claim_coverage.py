@@ -40,8 +40,15 @@ def test_a_new_decimal_without_a_claim_entry_fails():
 
 
 def test_a_dimension_is_not_a_numeric_claim():
-    tokens = extract_numeric_tokens(r"\begin{subfigure}[b]{0.48\textwidth} $38.78$ \end{subfigure}")
+    tokens = extract_numeric_tokens(
+        r"\begin{subfigure}[b]{0.48\textwidth} \hskip 0.15in $38.78$ \end{subfigure}"
+    )
     assert tokens == {"38.78"}
+
+
+def test_prose_in_does_not_hide_a_decimal():
+    tokens = extract_numeric_tokens("99.99 in the held-out task")
+    assert tokens == {"99.99"}
 
 
 def test_a_stale_map_token_and_an_unknown_claim_fail():

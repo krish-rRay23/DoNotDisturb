@@ -20,8 +20,9 @@ DEFAULT_MAP = Path("docs/claim_numeric_tokens.yaml")
 
 _DECIMAL = re.compile(r"(?<![\w.])([-+]?\d+\.\d+)(?![\w.])")
 _POWER = re.compile(r"10\^\{(-?\d+)\}")
+# Glued to the number only. A space plus the word "in" is prose, not inches.
 _DIMENSION = re.compile(
-    r"\s*(?:\\(?:textwidth|linewidth|columnwidth|hsize)|(?:in|em|ex|cm|mm|pt|pc)\b)"
+    r"(?:\\(?:textwidth|linewidth|columnwidth|hsize)|(?:in|em|ex|cm|mm|pt|pc)\b)"
 )
 
 
