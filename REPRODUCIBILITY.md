@@ -138,7 +138,7 @@ python -c "from adaptive_plasticity.placeholders import refuse_placeholder; refu
 
 ## Manuscript training commands (long; not launched here)
 
-These are the published protocols. They are full MuJoCo runs (25,000 offline updates and 25,000 online steps per cell, except where the harness says otherwise). Do not start them unless you intend to wait for the full matrix.
+`docs/run_guide.md` is the same four commands for a GPU machine, plus the post-run table and figure commands. The blocks below are the published protocols. They are full MuJoCo runs (25,000 offline updates and 25,000 online steps per cell, except where the harness says otherwise). Do not start them unless you intend to wait for the full matrix.
 
 Primary 135-cell matrix plus 15 reference cells:
 
