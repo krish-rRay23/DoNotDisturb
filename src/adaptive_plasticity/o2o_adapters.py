@@ -10,9 +10,11 @@ those codebases are reported here.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import torch
+import yaml
 
 from adaptive_plasticity.capacity_gate import CapacityGateConfig, CapacityGateController
 from adaptive_plasticity.interventions import apply_plasticity_intervention
@@ -27,6 +29,11 @@ __all__ = [
     "require_external_learner",
     "IQLLearnerAdapter",
     "CapacityGateSession",
+    "GateHookConfig",
+    "capacity_config_from_hook",
+    "load_gate_hook",
+    "load_external_hooks",
+    "open_external_session",
 ]
 
 
@@ -124,6 +131,117 @@ EXTERNAL_LEARNERS: dict[str, ExternalLearnerSpec] = {
 }
 
 
+@dataclass(frozen=True)
+class GateHookConfig:
+    """Thresholds and which modules a wrapper may edit.
+
+    External learners stay ``not_yet_run`` until their code is wrapped.
+    Loading a hook does not import that code and does not report a score.
+    """
+
+    learner: str
+    operator: str = "shrink_perturb"
+    dorm_on: float = 0.15
+    dorm_off: float = 0.08
+    rho_on: float = 0.70
+    rho_off: float = 0.85
+    cooldown_steps: int = 3000
+    active_severity: float = 0.1
+    editable_components: tuple[str, ...] = ("critic", "policy")
+    frozen_components: tuple[str, ...] = ()
+    status: str = "not_yet_run"
+
+
+def capacity_config_from_hook(hook: GateHookConfig) -> CapacityGateConfig:
+    """Build the in-repo gate config from a hook. Does not construct a learner."""
+    if hook.operator not in ("shrink_perturb", "redo"):
+        raise ValueError(f"Unknown gate operator {hook.operator!r}.")
+    overlap = set(hook.editable_components) & set(hook.frozen_components)
+    if overlap:
+        raise ValueError(f"Components cannot be both editable and frozen: {sorted(overlap)}.")
+    return CapacityGateConfig(
+        dorm_on=float(hook.dorm_on),
+        dorm_off=float(hook.dorm_off),
+        rho_on=float(hook.rho_on),
+        rho_off=float(hook.rho_off),
+        active_severity=float(hook.active_severity),
+        cooldown_steps=int(hook.cooldown_steps),
+    )
+
+
+def _as_tuple(value: Any, field: str) -> tuple[str, ...]:
+    if isinstance(value, str) or value is None:
+        raise ValueError(f"{field} must be a list of component names.")
+    return tuple(str(item) for item in value)
+
+
+def load_gate_hook(path: str | Path) -> GateHookConfig:
+    """Read one hook file. External hooks must stay ``not_yet_run``."""
+    document = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise ValueError(f"Gate hook {path} must be a mapping.")
+    learner = str(document["learner"])
+    status = str(document.get("status", "not_yet_run"))
+    if learner in EXTERNAL_LEARNERS and status != "not_yet_run":
+        raise ValueError(
+            f"{learner} is not wrapped. Its hook must stay status 'not_yet_run', got {status!r}."
+        )
+    if learner not in EXTERNAL_LEARNERS and learner != "iql":
+        raise ValueError(f"Unknown learner {learner!r}.")
+    hook = GateHookConfig(
+        learner=learner,
+        operator=str(document.get("operator", "shrink_perturb")),
+        dorm_on=float(document.get("dorm_on", 0.15)),
+        dorm_off=float(document.get("dorm_off", 0.08)),
+        rho_on=float(document.get("rho_on", 0.70)),
+        rho_off=float(document.get("rho_off", 0.85)),
+        cooldown_steps=int(document.get("cooldown_steps", 3000)),
+        active_severity=float(document.get("active_severity", 0.1)),
+        editable_components=_as_tuple(
+            document.get("editable_components", ["critic", "policy"]),
+            "editable_components",
+        ),
+        frozen_components=_as_tuple(document.get("frozen_components", []), "frozen_components"),
+        status=status,
+    )
+    capacity_config_from_hook(hook)
+    return hook
+
+
+def external_hook_dir(root: str | Path | None = None) -> Path:
+    """Directory of the hook YAML files.
+
+    The default sits next to this module (``adaptive_plasticity/o2o_hooks``),
+    so a non-editable install can still load the hooks. ``root`` overrides
+    that directory directly; it is not a repository root.
+    """
+    if root is None:
+        return Path(__file__).resolve().parent / "o2o_hooks"
+    return Path(root)
+
+
+def load_external_hooks(root: str | Path | None = None) -> dict[str, GateHookConfig]:
+    """Load the Cal-QL, PEX, and RO2O hook files. None of them import upstream code."""
+    hooks: dict[str, GateHookConfig] = {}
+    for path in sorted(external_hook_dir(root).glob("*.yaml")):
+        hook = load_gate_hook(path)
+        hooks[hook.learner] = hook
+    missing = set(EXTERNAL_LEARNERS) - set(hooks)
+    if missing:
+        raise FileNotFoundError(f"Missing external hook files for {sorted(missing)}.")
+    return hooks
+
+
+def open_external_session(key: str, adapter: Any) -> None:
+    """Refuse to build a session for an unwrapped external learner.
+
+    The adapter argument is accepted so a future wrapper can use the same
+    call. Today every external key raises ``ExternalLearnerUnavailable``.
+    """
+    del adapter
+    require_external_learner(key)
+
+
 def require_external_learner(key: str) -> ExternalLearnerSpec:
     """Refuse to pretend an external learner is available.
 
@@ -178,22 +296,51 @@ class CapacityGateSession:
 
     def __init__(
         self,
-        adapter: IQLLearnerAdapter,
+        adapter: Any,
         config: CapacityGateConfig | None = None,
         operator: str = "shrink_perturb",
+        *,
+        editable_components: tuple[str, ...] = ("critic", "policy"),
+        frozen_components: tuple[str, ...] = (),
     ) -> None:
         if operator not in ("shrink_perturb", "redo"):
             raise ValueError(f"Unknown gate operator {operator!r}.")
+        overlap = set(editable_components) & set(frozen_components)
+        if overlap:
+            raise ValueError(f"Components cannot be both editable and frozen: {sorted(overlap)}.")
         self.adapter = adapter
         self.operator = operator
+        self.editable_components = tuple(editable_components)
+        self.frozen_components = tuple(frozen_components)
         self.gate = CapacityGateController(config=config or CapacityGateConfig())
+
+    @classmethod
+    def from_hook(cls, adapter: Any, hook: GateHookConfig) -> "CapacityGateSession":
+        """Build a session from a hook. External learners still have to be wrapped."""
+        if hook.learner in EXTERNAL_LEARNERS:
+            open_external_session(hook.learner, adapter)
+        return cls(
+            adapter,
+            config=capacity_config_from_hook(hook),
+            operator=hook.operator,
+            editable_components=hook.editable_components,
+            frozen_components=hook.frozen_components,
+        )
+
+    def _subject(self) -> Any:
+        """Object whose ``policy`` and ``critic`` modules the gate can read.
+
+        The in-repo IQL adapter exposes ``.agent``. A mock or a future wrapper
+        can be that object itself.
+        """
+        return self.adapter.agent if hasattr(self.adapter, "agent") else self.adapter
 
     def evaluate(
         self,
         probe_batch: torch.Tensor,
         step: int,
     ) -> dict[str, Any]:
-        record = self.gate.update_from_agent(self.adapter.agent, probe_batch, step=step)
+        record = self.gate.update_from_agent(self._subject(), probe_batch, step=step)
         record["learner"] = self.adapter.name
         record["gate_operator"] = self.operator
         return record
@@ -209,12 +356,13 @@ class CapacityGateSession:
         record["applied"] = False
         if record.get("should_intervene", False):
             apply_plasticity_intervention(
-                self.adapter.agent,
+                self._subject(),
                 intervention_type=self.operator,
                 severity=self.gate.config.active_severity,
                 shrink=0.1,
                 probe_batch=probe_batch,
                 rng=rng,
+                target_components=self.editable_components,
             )
             record["applied"] = True
         return record

@@ -51,7 +51,7 @@ python experiments/aggregate_summaries.py --indir results/ablation_pilot --outdi
 python -c "from adaptive_plasticity.o2o_adapters import require_external_learner; require_external_learner('cal_ql')"
 ```
 
-The last command exits with `ExternalLearnerUnavailable`. That is the expected result: Cal-QL, PEX, and RO2O are not installed here. The same call with `pex` or `ro2o` raises as well.
+The last command exits with `ExternalLearnerUnavailable`. That is the expected result: Cal-QL, PEX, and RO2O are not installed here. The same call with `pex` or `ro2o` raises as well. Hook files under `src/adaptive_plasticity/o2o_hooks/` record thresholds and which modules a future wrapper may edit. They are package data, so they load from an installed copy. They do not import those repositories.
 
 `python experiments/stress_factorial.py` prints the 24-cell plan and does not train. `python experiments/run_ablations.py` prints 125 not-yet-run cells. `--smoke` checks that every cell builds a `CapacityGateConfig` and that the three probe sources can be sampled on synthetic data.
 

@@ -54,6 +54,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `experiments/aggregate_summaries.py` writes a per-cell table and a per-controller IQM with a stratified bootstrap interval from whatever `summary.json` files it is given. Empty inputs produce no IQM. The output is labeled as not a manuscript result. The IQM definition matches `experiments/final_analysis.py`.
 
+### External learner hooks
+
+- `src/adaptive_plasticity/o2o_hooks/` records gate thresholds and editable versus frozen modules for Cal-QL, PEX, and RO2O. The files ship with the package, so `load_external_hooks()` does not look two directories above the installed module. Each file stays `not_yet_run`. `open_external_session` still raises. A mock learner test checks that an intervention edits only the modules named as editable.
+
 ### Not run
 
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).

@@ -1,0 +1,16 @@
+# PEX is not vendored. Intervene only on the learnable online policy and critic.
+# Status stays not_yet_run. No scores.
+learner: pex
+status: not_yet_run
+operator: shrink_perturb
+dorm_on: 0.15
+dorm_off: 0.08
+rho_on: 0.70
+rho_off: 0.85
+cooldown_steps: 3000
+active_severity: 0.1
+editable_components: [policy, critic]
+frozen_components: [offline_policy]
+notes: >
+  Upstream is https://github.com/Haichao-Zhang/PEX (PyTorch).
+  The frozen offline policy must not be passed to the operator.
