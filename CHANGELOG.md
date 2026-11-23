@@ -100,6 +100,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `configs/placeholders/` names `halfcheetah-medium-replay-v2` (in the dataset registry, not in the 135-cell plan) and `antmaze-umaze-v2` (not registered and not wired). Both are `not_yet_run`. `refuse_placeholder` raises. They are not part of the ablation plan.
 
+### Plan sizes
+
+- Unit tests lock the dry-run matrices at 150 confirmatory runs (135 primary plus 15 reference) and 24 stress cells (2 environments, 4 controllers, seeds 0–2). A seed extension is a different length and is not that 24-cell plan. No training was launched.
+
 ### Not run
 
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).

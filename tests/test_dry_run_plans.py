@@ -43,7 +43,12 @@ def test_launchers_dry_run_without_training():
     captured = dry_run_plans.launch_dry_runs()
     assert "Primary plan: 135 cells" in captured["primary"]
     assert "Reference plan: 15 cells" in captured["primary"]
+    assert "Total: 150 runs" in captured["primary"]
     assert "24-CELL STRESS STUDY PLAN" in captured["stress"]
+    stress_rows = [
+        line for line in captured["stress"].splitlines() if line.strip().startswith("STRESS-")
+    ]
+    assert len(stress_rows) == 24
     assert "STRESS SEED EXTENSION (not yet run)" in captured["stress_extension"]
     assert "125" in captured["ablations"]
     assert "Smoke ok:" in captured["ablation_smoke"]
