@@ -4,6 +4,8 @@ All tests use tiny synthetic models; no real IQL training, no environment.
 """
 
 import math
+from pathlib import Path
+
 import numpy as np
 import pytest
 import torch
@@ -133,19 +135,23 @@ def test_performance_change_empty():
     assert math.isnan(out["normalized_first_delta"])
 
 
-def test_activation_dormancy_proxy():
-    """activation_dormancy is a policy weight sparsity proxy in [0,1]."""
-    # build a tiny linear model
-    linear = torch.nn.Linear(4, 2)
-    d = activation_dormancy(linear, eps=DORM_EPS)
-    # should be a float in [0,1] or NaN if nothing to count
-    if math.isfinite(d):
-        assert 0.0 <= d <= 1.0
-    # shared threshold is the single source of truth across M5/M6
-    assert DORM_EPS == 1e-4
-    # default eps must equal the shared constant
+def test_m6_doc_uses_the_probe_signature():
+    text = (Path(__file__).resolve().parents[1] / "docs" / "M6.md").read_text(encoding="utf-8")
+    assert "activation_dormancy(policy, eps=DORM_EPS)" not in text
+    assert "activation_dormancy(policy, probe_batch=None, tau=DORM_TAU)" in text
+    assert "legacy_weight_sparsity(policy, eps=DORM_EPS)" in text
+
+
+def test_activation_dormancy_ignores_the_old_weight_threshold():
+    """Neuronal dormancy takes a probe, not the legacy weight-sparsity epsilon."""
     import inspect
-    assert inspect.signature(activation_dormancy).parameters["eps"].default == DORM_EPS
+
+    assert "eps" not in inspect.signature(activation_dormancy).parameters
+    assert math.isnan(activation_dormancy(IQLAgent(8, 2, device="cpu").policy))
+    probe = _synthetic_probe(8, n=32, seed=0)
+    agent = IQLAgent(8, 2, device="cpu")
+    assert activation_dormancy(agent.policy, probe) == activation_dormancy_from_probe(agent.policy, probe)[0]
+    assert DORM_EPS == 1e-4
 
 
 def test_snapshot_diagnostics_keys():

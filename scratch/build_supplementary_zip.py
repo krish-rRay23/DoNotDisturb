@@ -101,10 +101,7 @@ python experiments/reproduce_all_tables_and_figures.py
 │   ├── final_analysis.py               # Statistical evaluation & audit suite
 │   ├── stress_analysis.py              # Physical non-stationarity diagnostics
 │   ├── final_factorial.py              # 135-run primary confirmatory factorial runner
-│   ├── stress_factorial.py             # 24-run non-stationary stress runner
-│   ├── mechanistic_stress_test.py      # Dual-probe actuator crippling test suite
-│   ├── run_overnight.py                # Distributed execution harness
-│   └── benchmark_concurrency.py        # Process & thread concurrency benchmark
+│   └── stress_factorial.py             # 24-run non-stationary stress runner
 ├── pyproject.toml                      # Standard Python packaging specification
 ├── requirements.txt                    # Pinned Python package dependencies
 ├── results/

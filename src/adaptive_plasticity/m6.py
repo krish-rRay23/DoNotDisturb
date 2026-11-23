@@ -281,20 +281,15 @@ def activation_dormancy(
     policy: torch.nn.Module,
     probe_batch: torch.Tensor | np.ndarray | None = None,
     tau: float = DORM_TAU,
-    eps: float = DORM_EPS,
 ) -> float:
-    """Neuronal activation dormancy (overall fraction, Phase 3 live metric).
+    """Neuronal activation dormancy (overall fraction).
 
-    Returns width-weighted overall dormancy D in [0, 1] measured from
+    Returns the width-weighted dormant fraction in [0, 1] measured from
     hidden-unit activations on the fixed probe batch (see
-    activation_dormancy_from_probe). ``probe_batch=None`` (no probe) yields
-    NaN to distinguish "no data" from genuine 0.0. ``eps`` is a deprecated
-    legacy signature placeholder (kept so old call sites/signatures still
-    import); it is ignored by the neuronal computation -- use
-    legacy_weight_sparsity() for the old weight-sparsity proxy. The
-    controller keeps dorm_weight = -0.2: higher dormancy -> lower strength.
+    activation_dormancy_from_probe). ``probe_batch=None`` yields NaN so a
+    missing probe is distinct from a genuine 0.0. The old weight-sparsity
+    proxy remains ``legacy_weight_sparsity``.
     """
-    _ = eps  # deprecated placeholder; neuronal metric does not use it.
     overall, _ = activation_dormancy_from_probe(policy, probe_batch, tau=tau)
     return overall
 
