@@ -1,0 +1,10 @@
+# Analysis plan. Does not read a log and does not invent an intervention count.
+name: primary_gate_firing
+status: not_yet_run
+executable: false
+kind: analysis
+reviewer_phrase: those cells do not measure a benefit from intervening
+why_not_run: >
+  A comparison of intervention counts on the 45 primary CapacityGate cells
+  against the HalfCheetah seed-0 stress trace has not been computed.
+  The printed stress trace stays the only firing record in the manuscript.

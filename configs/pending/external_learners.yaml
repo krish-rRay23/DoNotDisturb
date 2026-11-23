@@ -1,0 +1,12 @@
+# The hook files already exist. This plan does not wrap the learners.
+name: external_learners
+status: not_yet_run
+executable: false
+kind: existing
+reviewer_phrase: Cal-QL, PEX, and RO2O are not compared
+existing_plan: o2o_hooks
+existing_path: src/adaptive_plasticity/o2o_hooks
+why_not_run: >
+  configs are src/adaptive_plasticity/o2o_hooks/cal_ql.yaml, pex.yaml, and
+  ro2o.yaml. open_external_session still raises. No score from those
+  learners exists here.

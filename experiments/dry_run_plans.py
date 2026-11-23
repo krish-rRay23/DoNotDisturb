@@ -61,6 +61,20 @@ def _capture(fn, argv: list[str]) -> str:
     return buffer.getvalue()
 
 
+def describe_pending_plans() -> str:
+    """Print the needs-data plans. This does not train and does not score."""
+    from adaptive_plasticity.pending_plans import expand_pending_plan, load_pending_plans
+
+    lines = ["Pending plans (not launched):"]
+    for name, document in load_pending_plans(REPO_ROOT).items():
+        cells = expand_pending_plan(document)
+        lines.append(
+            f"pending {name}: kind={document['kind']} cells={len(cells)} status={document['status']}"
+        )
+    lines.append("Pending plans are not_yet_run. No training was started.")
+    return "\n".join(lines)
+
+
 def launch_dry_runs() -> dict[str, str]:
     """Call each launcher without ``--execute``. Returns captured stdout."""
     import analyze_stress_coverage
@@ -108,6 +122,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
     launch_dry_runs()
+    print(describe_pending_plans())
     print("Dry-run launchers exited without starting training.")
     if args.plans_only:
         print("Dataset check skipped (--plans-only).")

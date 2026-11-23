@@ -1,0 +1,12 @@
+# The threshold grid is already inside the 125-cell ablation plan.
+name: gate_threshold_sweep
+status: not_yet_run
+executable: false
+kind: existing
+reviewer_phrase: The gate thresholds are one published pair
+existing_plan: CONFIRM-ABLATION-FULL
+existing_path: configs/ablations/gate_thresholds.yaml
+why_not_run: >
+  configs/ablations/gate_thresholds.yaml is part of CONFIRM-ABLATION-FULL.
+  Every cell is not_yet_run. A finished sweep would be new data, and this
+  file does not invent one.

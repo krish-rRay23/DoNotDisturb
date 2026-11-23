@@ -1,0 +1,15 @@
+# Hopper actuator crippling. Not part of the 24-cell stress plan. Not launched.
+name: hopper_actuator_stress
+status: not_yet_run
+executable: false
+kind: grid
+reviewer_phrase: Hopper has no actuator-cripple result
+why_not_run: >
+  hopper-medium-v2 with actuator_cripple, controllers none, fixed, redo,
+  and capacity_gate, seeds 0, 1, and 2. Hopper is not in CONFIRM-STRESS-24.
+  Nothing has been run. Do not cite a Hopper stress score.
+grid:
+  datasets: [hopper-medium-v2]
+  shifts: [actuator_cripple]
+  controllers: [none, fixed, redo, capacity_gate]
+  seeds: [0, 1, 2]

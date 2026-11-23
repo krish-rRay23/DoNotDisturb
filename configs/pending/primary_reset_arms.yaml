@@ -1,0 +1,15 @@
+# ReDo and periodic resets on the confirmatory grid. Not launched.
+name: primary_reset_arms
+status: not_yet_run
+executable: false
+kind: grid
+reviewer_phrase: ReDo and periodic resets are outside the 135-cell matrix
+why_not_run: >
+  The same three environments, three confirmatory shifts, and seeds 0-4,
+  with controllers redo and redo_periodic. Those controllers are not in
+  the 135-cell primary plan. Nothing has been run. Do not cite a score.
+grid:
+  datasets: [halfcheetah-medium-v2, hopper-medium-v2, walker2d-medium-v2]
+  shifts: [none, obs_noise, reward_scale]
+  controllers: [redo, redo_periodic]
+  seeds: [0, 1, 2, 3, 4]
