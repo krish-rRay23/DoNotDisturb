@@ -22,6 +22,7 @@ __all__ = [
     "per_cell_rows",
     "iqm_by_controller",
     "paired_comparison",
+    "paired_effect_size",
 ]
 
 
@@ -165,6 +166,34 @@ def per_cell_rows(summaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
+def paired_effect_size(differences) -> dict[str, Any]:
+    """Cohen's dz for paired differences: mean divided by the sample standard deviation.
+
+    Fewer than two differences, or a zero sample standard deviation, leaves
+    the effect size empty. This is not a manuscript effect size.
+    """
+    values = np.asarray(differences, dtype=float)
+    count = int(values.size)
+    if count < 2:
+        return {
+            "n": count,
+            "cohens_dz": None,
+            "note": "need at least two paired differences for a sample standard deviation",
+        }
+    std = float(values.std(ddof=1))
+    if std == 0.0 or not np.isfinite(std):
+        return {
+            "n": count,
+            "cohens_dz": None,
+            "note": "sample standard deviation is zero",
+        }
+    return {
+        "n": count,
+        "cohens_dz": float(values.mean() / std),
+        "note": "mean paired difference divided by its sample standard deviation; not a manuscript effect size",
+    }
+
+
 def paired_comparison(
     rows: list[dict[str, Any]],
     left_controller: str,
@@ -278,6 +307,15 @@ def paired_comparison(
         "wilcoxon_statistic": wilcoxon_statistic,
         "wilcoxon_pvalue": wilcoxon_pvalue,
         "wilcoxon_note": wilcoxon_note,
+        "effect_size": paired_effect_size(differences),
+        "multiple_comparisons": {
+            "adjustment": "none",
+            "n_tests_in_this_report": 1 if differences.size else 0,
+            "note": (
+                "The p-value in this report is unadjusted. It is not a manuscript "
+                "test, and it is not corrected for any other comparison."
+            ),
+        },
         "pairs": pairs,
         "unpaired": unpaired,
         "manuscript_status": "not_a_manuscript_number",

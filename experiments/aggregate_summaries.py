@@ -124,10 +124,13 @@ def main(argv: list[str] | None = None) -> None:
     paired = payload.get("paired")
     if paired is not None:
         print(paired["banner"])
+        effect = paired["effect_size"]["cohens_dz"]
+        effect_text = "not computed" if effect is None else f"{effect:.4f}"
         print(
             f"Paired {paired['left_controller']} minus {paired['right_controller']}: "
             f"n={paired['n_pairs']} unpaired={len(paired['unpaired'])} "
-            f"({paired['wilcoxon_note']})"
+            f"cohens_dz={effect_text} ({paired['wilcoxon_note']}; "
+            f"{paired['multiple_comparisons']['note']})"
         )
 
 

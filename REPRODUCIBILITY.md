@@ -56,7 +56,7 @@ The last command exits with `ExternalLearnerUnavailable`. That is the expected r
 
 `python experiments/check_public_claims.py` exits 0 when the README, the manuscript, and the HTML preview still contain the transcribed tokens. It does not recompute them. `python experiments/stress_factorial.py` prints the 24-cell plan and does not train. `python experiments/run_ablations.py` prints 125 not-yet-run cells. `--smoke` checks that every cell builds a `CapacityGateConfig` and that the three probe sources can be sampled on synthetic data.
 
-`--pair none,fixed` on `aggregate_summaries.py` adds a left-minus-right comparison for cells that have one numeric score on each controller. It does not fill missing cells, and the statistic is not a manuscript result:
+`--pair none,fixed` on `aggregate_summaries.py` adds a left-minus-right comparison for cells that have one numeric score on each controller. It also reports Cohen's dz for those pairs and states that the p-value is unadjusted. It does not fill missing cells, and the statistic is not a manuscript result:
 
 ```bash
 python experiments/aggregate_summaries.py --indir results/ablation_pilot --outdir results/aggregate_check --pair none,fixed --replicates 200
