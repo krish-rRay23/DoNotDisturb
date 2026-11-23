@@ -34,11 +34,19 @@ def _final_score(summary: dict[str, Any]) -> float | None:
     return None
 
 
+def _controller_name(summary: dict[str, Any]) -> Any:
+    """Factorial summaries use ``controller``. M5 summaries use ``controller_type``."""
+    controller = summary.get("controller")
+    if controller is None:
+        controller = summary.get("controller_type")
+    return controller
+
+
 def scores_by_controller(summaries: list[dict[str, Any]]) -> dict[str, list[float]]:
     """Final numeric scores grouped by controller. Empty groups are omitted."""
     grouped: dict[str, list[float]] = {}
     for summary in summaries:
-        controller = summary.get("controller")
+        controller = _controller_name(summary)
         score = _final_score(summary)
         if controller is None or score is None:
             continue

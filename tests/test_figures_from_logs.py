@@ -31,6 +31,10 @@ def test_bar_means_come_from_the_supplied_scores(tmp_path: Path):
         {"controller": None, "score": 99.0},
     ]
     assert scores_by_controller(summaries) == {"none": [3.0, 5.0], "fixed": [10.0]}
+    m5_summary = {"controller_type": "adaptive", "normalized": [2.0, 4.0]}
+    assert scores_by_controller([m5_summary]) == {"adaptive": [4.0]}
+    both = {"controller": "none", "controller_type": "adaptive", "score": 1.0}
+    assert scores_by_controller([both]) == {"none": [1.0]}
     report = write_score_figure(summaries, tmp_path)
     assert report["wrote_figure"] is True
     payload = json.loads((tmp_path / "plotted.json").read_text(encoding="utf-8"))
