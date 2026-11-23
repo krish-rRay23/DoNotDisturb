@@ -108,13 +108,14 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e ".[dev]"
-pytest tests/ -q
-python experiments/run_ablations.py --smoke
-python experiments/stress_factorial.py
-python experiments/analyze_stress_coverage.py
+# Headless MuJoCo here needs glfw. MUJOCO_GL=egl failed to import.
+export MUJOCO_GL=glfw
+make check
 ```
 
-`requirements.txt` pins the versions used for those checks (Python 3.12). `torch==2.14.0` installs a CUDA build; this environment has no GPU, and the runners accept `--device cpu`.
+`make check` runs the unit tests (skipping cells that load gitignored datasets), the plan dry-run, a read-only manifest hash check, and the public-claim token check. It does not train and it does not download. The Makefile sets `MUJOCO_GL=glfw` when the variable is unset. An absent raw file does not fail the hash check; a present file with a different sha256 does.
+
+`requirements.txt` pins every direct dependency with `==` (Python 3.12). `torch==2.14.0` installs a CUDA build; this environment has no GPU, and the runners accept `--device cpu`.
 
 Full MuJoCo training is intentionally not started by the commands above. Exact launch commands, dataset acquisition, and the confirm tokens are in [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 

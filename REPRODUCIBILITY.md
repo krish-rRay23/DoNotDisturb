@@ -4,11 +4,16 @@ Reported numbers come from `research_paper/iclr2027/iclr2027_conference.tex`. Th
 
 Pinned packages for the checks run with this revision are in `requirements.txt` (CPython 3.12, Linux x86_64). `torch==2.14.0` is the cu130 wheel. `torch.cuda.is_available()` was false here, so every command below uses CPU unless you pass `--device cuda` on a machine with a GPU.
 
-Headless MuJoCo: `MUJOCO_GL=egl` failed to import here (`eglQueryString` missing). `MUJOCO_GL=glfw` imported and stepped `Hopper-v5`. Export it before training if EGL is unavailable:
+Headless MuJoCo: `MUJOCO_GL=egl` failed to import here (`eglQueryString` missing). `MUJOCO_GL=glfw` imported and stepped `Hopper-v5`. Export it before any command that imports MuJoCo, including the unit tests, when EGL is unavailable:
 
 ```bash
 export MUJOCO_GL=glfw
+make check
 ```
+
+`make check` is the single entry point. It runs `pytest` without the `needs_offline_data` cells, `experiments/dry_run_plans.py --plans-only`, `experiments/check_manifests.py`, and `experiments/check_public_claims.py`. The Makefile sets `MUJOCO_GL=glfw` when that variable is unset. The hash check is read-only. A missing HDF5 file is reported as absent and does not fail `make check`; pass `--require-present` when the files are supposed to be on disk. A sha256 mismatch exits 1. Nothing in this target trains or downloads.
+
+Every direct dependency in `requirements.txt` is pinned with `==`. No unpinned requirement line was left in that file. Minimum ranges stay in `pyproject.toml` for package metadata.
 
 ```bash
 python -m venv .venv
