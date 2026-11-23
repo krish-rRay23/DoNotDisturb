@@ -54,6 +54,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 ### Summary aggregation
 
 - `experiments/aggregate_summaries.py` writes a per-cell table and a per-controller IQM with a stratified bootstrap interval from whatever `summary.json` files it is given. Empty inputs produce no IQM. The output is labeled as not a manuscript result. The IQM definition matches `experiments/final_analysis.py`.
+- `--pair left,right` adds a left-minus-right comparison on cells that have exactly one numeric score for each controller. Duplicate rows and missing partners are listed and are not filled in. The Wilcoxon statistic is computed from those supplied pairs only.
 
 ### External learner hooks
 

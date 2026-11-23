@@ -16,6 +16,7 @@ from adaptive_plasticity.summary_stats import (
     iqm_by_controller,
     iqm_with_ci,
     load_summaries,
+    paired_comparison,
     per_cell_rows,
 )
 from aggregate_summaries import write_report
@@ -108,3 +109,39 @@ def test_seed_filter_drops_other_seeds(tmp_path: Path):
     assert payload["n_rows"] == 1
     assert payload["per_cell"][0]["seed"] == 3
     assert payload["per_cell"][0]["score"] == 9.0
+
+
+def test_paired_comparison_uses_only_complete_unique_cells():
+    rows = [
+        {"dataset_id": "hopper-medium-v2", "shift": "none", "seed": 0, "controller": "none", "score": 4.0},
+        {"dataset_id": "hopper-medium-v2", "shift": "none", "seed": 1, "controller": "none", "score": 6.0},
+        {"dataset_id": "hopper-medium-v2", "shift": "none", "seed": 2, "controller": "none", "score": 8.0},
+        {"dataset_id": "hopper-medium-v2", "shift": "none", "seed": 0, "controller": "fixed", "score": 1.0},
+        {"dataset_id": "hopper-medium-v2", "shift": "none", "seed": 1, "controller": "fixed", "score": 2.0},
+        {"dataset_id": "hopper-medium-v2", "shift": "none", "seed": 1, "controller": "fixed", "score": 9.0},
+        {"dataset_id": "hopper-medium-v2", "shift": "obs_noise", "seed": 0, "controller": "fixed", "score": 3.0},
+    ]
+    report = paired_comparison(rows, "none", "fixed")
+    assert report["n_pairs"] == 1
+    assert report["pairs"][0]["difference"] == 3.0
+    assert report["mean_difference"] == 3.0
+    assert report["n_left_greater"] == 1
+    assert report["manuscript_status"] == "not_a_manuscript_number"
+    reasons = {item["reason"] for item in report["unpaired"]}
+    assert reasons == {"duplicate_scored_rows", "missing_partner"}
+    assert report["wilcoxon_statistic"] == 0.0
+    empty = paired_comparison([], "none", "fixed")
+    assert empty["n_pairs"] == 0
+    assert empty["wilcoxon_statistic"] is None
+    assert empty["mean_difference"] is None
+    zeros = paired_comparison(
+        [
+            {"dataset_id": "a", "shift": "none", "seed": 0, "controller": "none", "score": 1.0},
+            {"dataset_id": "a", "shift": "none", "seed": 0, "controller": "fixed", "score": 1.0},
+        ],
+        "none",
+        "fixed",
+    )
+    assert zeros["n_ties"] == 1
+    assert zeros["wilcoxon_statistic"] is None
+    assert "zero" in zeros["wilcoxon_note"]
