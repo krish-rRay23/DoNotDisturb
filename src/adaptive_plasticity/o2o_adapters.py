@@ -272,18 +272,23 @@ class IQLLearnerAdapter:
 
     @property
     def name(self) -> str:
+        """Short name of this in-repo learner."""
         return "iql"
 
     def policy_module(self) -> torch.nn.Module:
+        """The policy module a gate probe can run."""
         return self.agent.policy
 
     def critic_module(self) -> torch.nn.Module:
+        """The critic module a gate probe can run."""
         return self.agent.critic
 
     def actor_optimizer(self) -> torch.optim.Optimizer | None:
+        """Optimizer that steps the policy, if the agent has one."""
         return getattr(self.agent, "actor_optimizer", None)
 
     def critic_optimizer(self) -> torch.optim.Optimizer | None:
+        """Optimizer that steps the critic, if the agent has one."""
         return getattr(self.agent, "critic_optimizer", None)
 
 
@@ -340,6 +345,7 @@ class CapacityGateSession:
         probe_batch: torch.Tensor,
         step: int,
     ) -> dict[str, Any]:
+        """Update the gate from one probe and return the record. It does not edit parameters."""
         record = self.gate.update_from_agent(self._subject(), probe_batch, step=step)
         record["learner"] = self.adapter.name
         record["gate_operator"] = self.operator
@@ -352,6 +358,7 @@ class CapacityGateSession:
         *,
         rng: Any = None,
     ) -> dict[str, Any]:
+        """Evaluate the gate and apply the configured operator only when it says to intervene."""
         record = self.evaluate(probe_batch, step)
         record["applied"] = False
         if record.get("should_intervene", False):

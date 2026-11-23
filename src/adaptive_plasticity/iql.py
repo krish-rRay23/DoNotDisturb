@@ -37,6 +37,7 @@ class MLP(nn.Module):
         self.network = nn.Sequential(*layers)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Run the stacked linear layers and ReLUs."""
         return self.network(inputs)
 
 
@@ -51,6 +52,7 @@ class TanhGaussianPolicy(nn.Module):
         self.act_dim = act_dim
 
     def forward(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return the Gaussian mean and standard deviation before tanh squashing."""
         features = self.backbone(observations)
         mean = self.mean_head(features)
         log_std = self.log_std_head(features).clamp(LOG_STD_MIN, LOG_STD_MAX)
@@ -92,6 +94,7 @@ class Critic(nn.Module):
         self.q2 = MLP(obs_dim + act_dim, hidden_dim, num_layers, 1)
 
     def forward(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return the two Q-values for the concatenated observation and action."""
         inputs = torch.cat([observations, actions], dim=-1)
         return self.q1(inputs).squeeze(-1), self.q2(inputs).squeeze(-1)
 
@@ -104,6 +107,7 @@ class ValueCritic(nn.Module):
         self.v = MLP(obs_dim, hidden_dim, num_layers, 1)
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        """Return the state value V(s)."""
         return self.v(observations).squeeze(-1)
 
 
@@ -262,6 +266,7 @@ class IQLAgent:
         }
 
     def state_dict(self) -> dict[str, Any]:
+        """Networks and optimizer state for a checkpoint."""
         return {
             "policy": self.policy.state_dict(),
             "critic": self.critic.state_dict(),
@@ -273,6 +278,7 @@ class IQLAgent:
         }
 
     def load_state_dict(self, state: dict[str, Any]) -> None:
+        """Restore networks and optimizer state from a checkpoint."""
         self.policy.load_state_dict(state["policy"])
         self.critic.load_state_dict(state["critic"])
         self.target_critic.load_state_dict(state["target_critic"])

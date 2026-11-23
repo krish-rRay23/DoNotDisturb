@@ -23,6 +23,7 @@ class PlaceholderNotRunnable(RuntimeError):
 
 
 def placeholder_dir(root: str | Path | None = None) -> Path:
+    """Directory of the not-yet-run placeholder configs."""
     base = Path(__file__).resolve().parents[2] if root is None else Path(root)
     return base / "configs" / "placeholders"
 

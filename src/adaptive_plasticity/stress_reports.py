@@ -183,6 +183,7 @@ def coverage_report(
 
 
 def render_coverage_report(report: dict[str, Any]) -> str:
+    """Text report of which stress cells have local summaries. It does not fill a missing cell."""
     lines = [
         "Stress-test coverage (manuscript numbers are copied from the tex table; local files are separate).",
         f"Source: {report['source']}",

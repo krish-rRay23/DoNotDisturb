@@ -40,6 +40,7 @@ def apply_observation_noise(
     max_magnitude: float = None,
     rng: np.random.RandomState | None = None,
 ) -> np.ndarray:
+    """Add Gaussian observation noise scaled by severity, and return a copy."""
     if severity <= 0:
         return obs.copy()
     if rng is None:
@@ -63,6 +64,7 @@ def apply_reward_scale(
     max_reward: float = None,
     rng: np.random.RandomState | None = None,
 ) -> float:
+    """Multiply the reward by severity and clip it to the given bounds."""
     if severity <= 0:
         return reward
     scaled = reward * severity
@@ -86,20 +88,24 @@ class DistributionShiftOrchestrator:
         self.severity = severity
         self._logged = False
 
-    def is_shifted(self, online_step):
+    def is_shifted(self, online_step: int) -> bool:
+        """Whether the online step is at or past the configured shift step."""
         return self.shift_step > 0 and online_step >= self.shift_step
 
-    def apply_to_observation(self, obs, rng=None):
+    def apply_to_observation(self, obs: np.ndarray, rng: np.random.RandomState | None = None) -> np.ndarray:
+        """Apply observation noise when that is the configured shift. Otherwise return the observation."""
         if self.shift_type == "obs_noise":
             return apply_observation_noise(obs, severity=self.severity, rng=rng)
         return obs
 
-    def apply_to_reward(self, reward):
+    def apply_to_reward(self, reward: float) -> float:
+        """Rescale the reward when that is the configured shift. Otherwise return it."""
         if self.shift_type == "reward_scale":
             return apply_reward_scale(reward, severity=self.severity)
         return reward
 
-    def snapshot(self):
+    def snapshot(self) -> dict[str, Any]:
+        """The shift type, step, and severity currently configured."""
         return {"shift_type": self.shift_type, "shift_step": self.shift_step, "severity": self.severity}
 
 
@@ -112,13 +118,21 @@ class Intervention:
         self._logged = False
         self._adaptive_params = {}
 
-    def is_shifted(self, online_step):
+    def is_shifted(self, online_step: int) -> bool:
+        """Whether the online step is at or past this intervention's shift step."""
         return self.shift_step > 0 and online_step >= self.shift_step
 
-    def apply(self, obs, reward, rng=None):
+    def apply(
+        self,
+        obs: np.ndarray,
+        reward: float,
+        rng: np.random.RandomState | None = None,
+    ) -> tuple[np.ndarray, float]:
+        """Apply the intervention. Subclasses implement the transform."""
         raise NotImplementedError
 
-    def diagnostics(self):
+    def diagnostics(self) -> dict[str, Any]:
+        """Intervention type, shift step, and severity."""
         return {
             "intervention_type": self.intervention_type,
             "shift_step": self.shift_step,
@@ -133,12 +147,19 @@ class FixedIntervention(Intervention):
         super().__init__(self.intervention_type, shift_step, severity, seed)
         self._shift_type = shift_type
 
-    def apply(self, obs, reward, rng=None):
+    def apply(
+        self,
+        obs: np.ndarray,
+        reward: float,
+        rng: np.random.RandomState | None = None,
+    ) -> tuple[np.ndarray, float]:
+        """Apply observation noise or reward scaling for the configured shift type."""
         transformed_obs = apply_observation_noise(obs, severity=self.severity) if self._shift_type == "obs_noise" else obs.copy()
         transformed_reward = apply_reward_scale(reward, severity=self.severity) if self._shift_type == "reward_scale" else reward
         return transformed_obs, transformed_reward
 
-    def diagnostics(self):
+    def diagnostics(self) -> dict[str, Any]:
+        """Base diagnostics plus the fixed intervention name."""
         base = super().diagnostics()
         base["intervention"] = self.intervention_type
         return base
@@ -156,7 +177,13 @@ class RandomIntervention(Intervention):
             self._fire_prob = 0.0
         self._fired_this_run = False
 
-    def apply(self, obs, reward, rng=None):
+    def apply(
+        self,
+        obs: np.ndarray,
+        reward: float,
+        rng: np.random.RandomState | None = None,
+    ) -> tuple[np.ndarray, float]:
+        """Apply the same shift transform as the fixed intervention, and record one fire."""
         after_shift = self.is_shifted(0)
         if after_shift and not self._fired_this_run:
             self._fired_this_run = True
@@ -164,7 +191,8 @@ class RandomIntervention(Intervention):
         transformed_reward = apply_reward_scale(reward, severity=self.severity) if self._shift_type == "reward_scale" else reward
         return transformed_obs, transformed_reward
 
-    def diagnostics(self):
+    def diagnostics(self) -> dict[str, Any]:
+        """Base diagnostics plus the random intervention name and fire probability."""
         base = super().diagnostics()
         base["intervention"] = self.intervention_type
         base["fire_prob"] = self._fire_prob
@@ -187,7 +215,8 @@ class AdaptiveIntervention(Intervention):
         self.max_severity = max_severity
         self._history = [{}]
 
-    def update(self, diagnostics):
+    def update(self, diagnostics: dict[str, Any]) -> float:
+        """Combine the supplied diagnostic channels into one clipped intervention strength."""
         repr_val = diagnostics.get("repr_change", 0.0)
         perf_val = diagnostics.get("perf_change", 0.0)
         dorm_val = diagnostics.get("activation_dormancy", 0.0)
@@ -214,10 +243,17 @@ class AdaptiveIntervention(Intervention):
         })
         return strength
 
-    def apply(self, obs, reward, rng=None):
+    def apply(
+        self,
+        obs: np.ndarray,
+        reward: float,
+        rng: np.random.RandomState | None = None,
+    ) -> tuple[np.ndarray, float]:
+        """Return the observation and reward unchanged. Strength is tracked by update."""
         return obs, reward
 
-    def diagnostics(self):
+    def diagnostics(self) -> dict[str, Any]:
+        """Base diagnostics plus the adaptive channel weights."""
         base = super().diagnostics()
         base["adaptive_params"] = {
             "repr_weight": self.repr_weight,

@@ -57,11 +57,13 @@ __all__ = [
 
 
 def ablation_config_dir(root: str | Path | None = None) -> Path:
+    """Directory that holds the ablation YAML files."""
     base = Path(__file__).resolve().parents[2] if root is None else Path(root)
     return base / "configs" / "ablations"
 
 
 def load_study(path: str | Path) -> dict[str, Any]:
+    """Load one ablation YAML. Its status must stay not_yet_run."""
     study_path = Path(path)
     with study_path.open("r", encoding="utf-8") as handle:
         document = yaml.safe_load(handle)
@@ -135,6 +137,7 @@ def expand_study(document: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def load_all_studies(root: str | Path | None = None) -> list[dict[str, Any]]:
+    """Expand every ablation file into planned rows. Nothing is trained."""
     config_dir = ablation_config_dir(root)
     rows: list[dict[str, Any]] = []
     for name in STUDY_FILES:
@@ -147,6 +150,7 @@ def load_all_studies(root: str | Path | None = None) -> list[dict[str, Any]]:
 
 
 def ablation_output_name(cell: dict[str, Any], *, pilot: bool) -> str:
+    """Stable directory name for one planned ablation cell."""
     prefix = "PILOT-ABL" if pilot else "ABL"
     return (
         f"{prefix}-{cell['study']}-{cell['cell_id']}-"
@@ -155,6 +159,7 @@ def ablation_output_name(cell: dict[str, Any], *, pilot: bool) -> str:
 
 
 def select_cells(cells: list[dict[str, Any]], *, pilot: bool, study: str | None = None) -> list[dict[str, Any]]:
+    """Keep cells from one study, and only the pilot rows when asked."""
     selected = cells
     if study is not None:
         selected = [cell for cell in selected if cell["study"] == study]
@@ -190,6 +195,7 @@ def select_probe_pilot(cells: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def apply_pilot_budget(cell: dict[str, Any]) -> dict[str, Any]:
+    """Copy a cell onto the short pilot budget. It stays not_yet_run."""
     updated = dict(cell)
     updated.update(PILOT_BUDGET)
     updated["status"] = "not_yet_run"

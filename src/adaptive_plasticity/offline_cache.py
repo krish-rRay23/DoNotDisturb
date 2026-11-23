@@ -40,6 +40,7 @@ def get_offline_checkpoint_path(
     seed: int,
     checkpoint_dir: str | Path = DEFAULT_CHECKPOINT_DIR,
 ) -> Path:
+    """Path of the shared offline checkpoint for one dataset and seed."""
     return Path(checkpoint_dir) / offline_checkpoint_name(dataset_id, seed)
 
 

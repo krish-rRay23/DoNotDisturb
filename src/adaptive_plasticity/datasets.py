@@ -26,6 +26,7 @@ import copy
 import hashlib
 import json
 import sys
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -125,7 +126,7 @@ def raw_path(canonical_id: str, project_root: str | Path = ".") -> Path:
     return raw_dir(project_root) / REGISTRY[canonical_id]["filename"]
 
 
-def missing_dataset_ids(dataset_ids, project_root: str | Path = ".") -> list[str]:
+def missing_dataset_ids(dataset_ids: Iterable[str], project_root: str | Path = ".") -> list[str]:
     """Return registry ids whose raw file is absent or empty.
 
     This never downloads. An unknown id raises ``KeyError``.

@@ -75,6 +75,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `.github/workflows/tests.yml` runs `make check` on pull requests and on `main`. `MUJOCO_GL=glfw` under Xvfb. Tests marked `needs_offline_data` are skipped so CI does not download datasets or run the short training cells that need them.
 
+### Public API notes
+
+- Public functions and methods in `src/adaptive_plasticity/` now have a docstring and type annotations. No return value, default, or control flow changed. The notes describe the existing functions. They do not add a result.
+
 ### Public claim check
 
 - `experiments/check_public_claims.py` checks that the README, the manuscript, and the HTML preview still contain the tokens transcribed in `docs/manuscript_claims.yaml`. It does not recompute them. The unverified revision figures `0.9915`, `1.6501`, and `40.37` are forbidden on those three surfaces. The HTML preview now also states the paired-\(t\) statistic and the bootstrap interval on the mean paired difference, both already in the manuscript.
