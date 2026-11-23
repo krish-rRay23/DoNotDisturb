@@ -1,4 +1,4 @@
 # Documentation
 
-Design notes, experiment protocols, and reporting guidance will be added in later milestones.
+`claim_log_checklist.md` maps each manuscript claim to the script and working-tree log that would carry it. Absent logs are `unverified`. The page does not recompute a score.
 
