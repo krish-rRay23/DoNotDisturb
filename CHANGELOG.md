@@ -50,6 +50,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 - The limitations section now states the locomotion scope, that \textsc{CapacityGate} does not explore, that hysteresis is relative to the existing \(7\text{--}12\%\) active-network band, and that \textsc{CapacityGate} stress is seed 0 only. ReDo is not described as an arm of the 135-cell matrix. No number was added or replaced.
 - ReDo is named as an approximate, low-disruption reset in the operator subsection, the stress table, the stress caption, and the literature matrix. Bare "CapacityGate" in that caption is \textsc{CapacityGate}.
 - Adam, Kaiming initialization, Polyak averaging, reservoir sampling, and Gym are marked `TODO: cite`. No bibliography entry was added for them. `agarwal2021rliable` is commented as a duplicate of the cited `agarwal2021deep` key.
+- Figure captions use $\rho(t)$ and $d(t)$ for the telemetry trajectories, and the stress-figure caption says "standard deviation" and names ReDo as an approximate, low-disruption reset. The inequalities $0.70$ and $0.15$ and the printed returns are unchanged.
 
 ### Reproducibility entry point
 

@@ -28,6 +28,9 @@ def test_redo_is_named_as_an_approximate_low_disruption_reset():
     assert "approximate, low-disruption reset" in tex
     assert "Neuron Recycling" not in tex
     assert r"\textsc{CapacityGate} is displayed" in tex
+    assert r"mean $\pm$ standard deviation across 3 paired seeds" in tex
+    assert "dormant neuron recycling (ReDo)" not in tex
+    assert r"$\rho(t) > 0.70, d(t) < 0.15$" in tex
 
 
 def test_missing_citations_are_todos_and_not_new_bibliography_entries():
