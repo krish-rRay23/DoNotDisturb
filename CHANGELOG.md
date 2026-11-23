@@ -15,6 +15,21 @@ Aligned the public text with the manuscript in `research_paper/iclr2027/iclr2027
 - #18. LaTeX tables from supplied summaries. Means, sample standard deviations, and IQMs come from those files. M5 `shift_type`, including the no-shift case, is kept. A fixture is labeled as a fixture.
 - #19. Limitations and wording. The limitations section states scope, and missing citations are marked `TODO: cite`. No manuscript number was added or replaced.
 
+### Merged pull requests #20–#26
+
+- #20. Changelog index for pull requests #14–#19. `requirements.txt` was already pinned and `REPRODUCIBILITY.md` already documented `MUJOCO_GL=glfw`.
+- #21. Plan-size tests lock the dry-run at 150 confirmatory runs and 24 stress cells.
+- #22. Claim-to-log checklist. A missing log is `unverified`.
+- #23. Figure-caption notation. No printed return changed.
+- #24. Claim-coverage check. A new decimal in the manuscript fails until the claim map names it.
+- #25. GPU run guide for `CONFIRM-FINAL-150`, `CONFIRM-STRESS-24`, `CONFIRM-STABLE-9`, and `CONFIRM-ABLATION-FULL`.
+- #26. Removed the three training scripts that did not require a confirm token. What a reviewer should run instead is not the same experiment in every case:
+  - `experiments/run_overnight.py` trained the 135-cell primary matrix, cached the 15 shared offline checkpoints, and then ran final analysis. It did not train the 15 reference cells. The confirm-gated command is `experiments/final_factorial.py --execute --confirm-matrix CONFIRM-FINAL-150`, which trains those 135 primary cells and the 15 reference cells. That is 15 runs the overnight script did not launch.
+  - `experiments/benchmark_concurrency.py` swept 1–4 workers and recorded runtime, step rate, update throughput, and GPU utilization. It was not a manuscript path, and nothing replaces those measurements. `--workers` on `experiments/final_factorial.py` only sets how many cells run at once. It does not sweep worker counts and it does not write a benchmark.
+  - `experiments/mechanistic_stress_test.py` forced 35% neuron dormancy at step 2,500 on hopper and compared the gate with a passive arm. That exploratory run was removed and has no successor. `experiments/stress_factorial.py --execute --confirm-matrix CONFIRM-STRESS-24` is a different experiment: the 24-cell actuator-cripple study. Its logs are not a rerun of the mechanistic test.
+  - `activation_dormancy` no longer takes the ignored `eps` argument. `docs/M6.md` matches the probe signature. Weight sparsity stays on `legacy_weight_sparsity`.
+- No manuscript number was added or replaced.
+
 ### Source of numbers
 
 - No revised manuscript, response to reviewers, or `README_UPDATED.md` is in the repository. Reported figures stay the manuscript figures. They were not recomputed and no new scores were invented.
@@ -123,7 +138,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 ### Dead launchers
 
-- Removed `experiments/run_overnight.py`, `experiments/benchmark_concurrency.py`, and `experiments/mechanistic_stress_test.py`. Nothing in the package or the tests imported them, and none of them required a confirm token. The documented launchers are unchanged. `activation_dormancy` no longer accepts the ignored `eps` argument; weight sparsity stays on `legacy_weight_sparsity`.
+- Removed `experiments/run_overnight.py`, `experiments/benchmark_concurrency.py`, and `experiments/mechanistic_stress_test.py`. Nothing in the package or the tests imported them, and none of them required a confirm token. The launchers that remain are unchanged. Pull request #26 records the scope of each removed script, including which ones have no successor. `activation_dormancy` no longer accepts the ignored `eps` argument; weight sparsity stays on `legacy_weight_sparsity`.
 
 ### Blockers
 
