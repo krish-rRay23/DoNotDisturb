@@ -104,6 +104,7 @@ def log_problems(log: str) -> list[str]:
 
 
 def check_repository(root: str | Path) -> list[str]:
+    """Run the structural manuscript check on this repository. It does not compile TeX."""
     base = Path(root)
     tex_path = base / "research_paper" / "iclr2027" / "iclr2027_conference.tex"
     bib_path = base / "research_paper" / "iclr2027" / "iclr2027_conference.bib"
