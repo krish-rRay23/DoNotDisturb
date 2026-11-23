@@ -4,6 +4,8 @@ All fixtures are small synthetic HDF5 files generated at runtime. These tests
 never touch the network and never require real D4RL datasets.
 """
 
+import json
+
 import h5py
 import numpy as np
 import pytest
@@ -142,6 +144,32 @@ def test_missing_dataset_ids_treats_empty_files_as_absent(tmp_path):
     assert missing == ["hopper-medium-v2", "walker2d-medium-v2"]
     with pytest.raises(KeyError, match="antmaze-umaze-v2"):
         datasets.missing_dataset_ids(("antmaze-umaze-v2",), tmp_path)
+
+
+def test_check_manifest_sha256_is_read_only(tmp_path):
+    target = datasets.raw_path("hopper-medium-v2", tmp_path)
+    target.write_bytes(b"replay-bytes")
+    manifest_file = tmp_path / "data" / "manifests" / "hopper-medium-v2.json"
+    manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    digest = datasets.sha256_of_file(target)
+    manifest_file.write_text(json.dumps({"sha256": digest, "validation_status": "validated"}), encoding="utf-8")
+    before = manifest_file.read_text(encoding="utf-8")
+    report = datasets.check_manifest_sha256("hopper-medium-v2", tmp_path)
+    assert report["match"] is True
+    assert report["actual_sha256"] == digest
+    assert manifest_file.read_text(encoding="utf-8") == before
+    manifest_file.write_text(json.dumps({"sha256": "0" * 64}), encoding="utf-8")
+    mismatch = datasets.check_manifest_sha256("hopper-medium-v2", tmp_path)
+    assert mismatch["match"] is False
+    absent = datasets.check_manifest_sha256("walker2d-medium-v2", tmp_path)
+    assert absent["raw_present"] is False
+    assert absent["match"] is None
+    with pytest.raises(SystemExit) as mismatch_exit:
+        datasets.main(["--root", str(tmp_path), "--check-hash", "hopper-medium-v2"])
+    assert mismatch_exit.value.code == 1
+    with pytest.raises(SystemExit) as absent_exit:
+        datasets.main(["--root", str(tmp_path), "--check-hash", "walker2d-medium-v2"])
+    assert absent_exit.value.code == 2
 
 
 def test_loader_refuses_to_download_and_points_to_acquire(tmp_path):

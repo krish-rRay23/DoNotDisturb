@@ -25,6 +25,7 @@ import argparse
 import copy
 import hashlib
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -150,6 +151,35 @@ def retrieval_url(canonical_id: str) -> str:
     entry = REGISTRY[canonical_id]
     official_https = entry["official_url"].replace("http://", "https://", 1)
     return f"https://web.archive.org/web/{entry['wayback_timestamp']}id_/{official_https}"
+
+
+def check_manifest_sha256(canonical_id: str, project_root: str | Path = ".") -> dict[str, Any]:
+    """Compare a local raw file with the sha256 recorded in its manifest.
+
+    This never downloads and never writes. A missing file or manifest leaves
+    ``match`` as ``None``.
+    """
+    if canonical_id not in REGISTRY:
+        raise KeyError(f"Unknown dataset {canonical_id!r}. Known: {sorted(REGISTRY)}")
+    target = Path(project_root) / "data" / "raw" / REGISTRY[canonical_id]["filename"]
+    manifest_file = Path(project_root) / "data" / "manifests" / f"{canonical_id}.json"
+    report: dict[str, Any] = {
+        "canonical_id": canonical_id,
+        "raw_present": target.is_file() and target.stat().st_size > 0,
+        "manifest_present": manifest_file.is_file(),
+        "match": None,
+    }
+    if not report["raw_present"] or not report["manifest_present"]:
+        return report
+    manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+    expected = manifest.get("sha256")
+    if not isinstance(expected, str) or not expected:
+        return report
+    actual = sha256_of_file(target)
+    report["expected_sha256"] = expected
+    report["actual_sha256"] = actual
+    report["match"] = actual == expected
+    return report
 
 
 def sha256_of_file(path: str | Path) -> str:
@@ -444,15 +474,20 @@ def mark_manifest_validated(canonical_id: str, report: dict[str, Any], project_r
     return manifest
 
 
-def main() -> None:
-    """Command-line entry point: list, acquire, or inspect datasets."""
+def main(argv: list[str] | None = None) -> None:
+    """Command-line entry point: list, acquire, inspect, or check a manifest hash."""
     parser = argparse.ArgumentParser(description="M3 offline dataset pipeline (explicit acquisition, local-only loading).")
     parser.add_argument("--root", type=Path, default=Path("."), help="Project root containing data/.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--list", action="store_true", help="List registry entries.")
     group.add_argument("--acquire", metavar="DATASET_ID", help="Download one raw dataset (explicit network use).")
     group.add_argument("--inspect", metavar="DATASET_ID", help="Validate and summarize a local dataset (no network).")
-    arguments = parser.parse_args()
+    group.add_argument(
+        "--check-hash",
+        metavar="DATASET_ID",
+        help="Compare the local file to the manifest sha256. Does not download or write.",
+    )
+    arguments = parser.parse_args(argv)
 
     if arguments.list:
         for canonical_id, entry in REGISTRY.items():
@@ -463,6 +498,17 @@ def main() -> None:
     if arguments.acquire:
         acquire_dataset(arguments.acquire, arguments.root)
         return
+
+    if arguments.check_hash:
+        report = check_manifest_sha256(arguments.check_hash, arguments.root)
+        if report["match"] is True:
+            print(f"{arguments.check_hash}: sha256 matches the manifest")
+            return
+        if report["match"] is False:
+            print(f"{arguments.check_hash}: sha256 does not match the manifest", file=sys.stderr)
+            raise SystemExit(1)
+        print(f"{arguments.check_hash}: raw file or manifest sha256 is absent", file=sys.stderr)
+        raise SystemExit(2)
 
     report = inspect_dataset(arguments.inspect, arguments.root)
     mark_manifest_validated(arguments.inspect, report, arguments.root)
