@@ -65,3 +65,10 @@ jobs:
             echo "LaTeX log still reports an unresolved reference or an error."
             exit 1
           fi
+
+      - name: Upload the manuscript PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: manuscript-pdf
+          path: research_paper/iclr2027/iclr2027_conference.pdf
+          if-no-files-found: error

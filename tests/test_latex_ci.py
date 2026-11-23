@@ -17,3 +17,7 @@ def test_latex_job_uses_a_pinned_image_and_a_short_timeout():
     assert "apt-get" not in latex
     assert "texlive-latex-extra" not in latex
     assert "cancel-in-progress: true" in text
+    assert "uses: actions/upload-artifact@v4" in latex
+    assert "name: manuscript-pdf" in latex
+    assert "path: research_paper/iclr2027/iclr2027_conference.pdf" in latex
+    assert "if-no-files-found: error" in latex

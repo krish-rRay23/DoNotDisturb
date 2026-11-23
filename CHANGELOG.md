@@ -86,6 +86,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `.github/workflows/tests.yml` runs `make check` on pull requests and on `main`. `MUJOCO_GL=glfw` under Xvfb. Tests marked `needs_offline_data` are skipped so CI does not download datasets or run the short training cells that need them.
 - The manuscript job no longer installs TeX Live with apt. It uses the pinned image `ghcr.io/xu-cheng/texlive-small:20261001`, installs `algorithms`, `eso-pic`, and `multirow` from the matching `2026/10/01` TeX Live archive, and stops after 15 minutes. A new push on the same ref cancels the previous run. The image pull is not cached: GitHub does not cache a job container. No score is produced.
+- That job uploads `research_paper/iclr2027/iclr2027_conference.pdf` as the `manuscript-pdf` artifact. The upload fails if the PDF is missing. The PDF is the CI build of the manuscript. It is not a new result.
 
 ### Public API notes
 
