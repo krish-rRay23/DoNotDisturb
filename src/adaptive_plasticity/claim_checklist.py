@@ -55,9 +55,12 @@ CLAIMS: tuple[dict[str, Any], ...] = (
             "CapacityGate in that table is seed 0 only."
         ),
         "script": "experiments/stress_factorial.py",
-        "logs": ("results/stress_study",),
+        "logs": ("results/stress_study/STRESS-*/summary.json",),
         "role": "manuscript",
-        "note": "The 24-cell plan is not an execution. Cell summaries are not read.",
+        "note": (
+            "Only STRESS- run summaries count. A STABLE_VAL summary in the same directory "
+            "is the nine-cell validation and is not this table. Summaries are not read."
+        ),
     },
     {
         "claim_id": "stress_telemetry",
@@ -81,9 +84,16 @@ CLAIMS: tuple[dict[str, Any], ...] = (
         "claim_id": "learning_curves",
         "manuscript": "Figure fig:learning_curves.",
         "script": "experiments/reproduce_all_tables_and_figures.py",
-        "logs": ("results/final_analysis/learning_curves.png",),
+        "logs": (
+            "results/reproduced_figures/figure2_online_adaptation_learning_curves.png",
+            "plots/final/learning_curves.png",
+        ),
         "role": "manuscript",
-        "note": "The reproduce script draws this figure only when the archived curve file is on disk.",
+        "note": (
+            "reproduce_all_tables_and_figures.py writes the first path. "
+            "final_analysis.py writes the second path under its default --plots-dir. "
+            "Neither writer uses results/final_analysis/learning_curves.png. The files are not opened."
+        ),
     },
     {
         "claim_id": "older_final_summary",
@@ -126,6 +136,8 @@ CLAIMS: tuple[dict[str, Any], ...] = (
 
 
 def _log_present(root: Path, relative: str) -> bool:
+    if any(char in relative for char in "*?[]"):
+        return any(root.glob(relative))
     path = root / relative
     if path.is_file():
         return True

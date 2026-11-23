@@ -107,7 +107,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 ### Claim checklist
 
-- `docs/claim_log_checklist.md` maps each manuscript claim to the script and the working-tree log that would carry it. A missing log is `unverified`. A file that is on disk is `present_not_recomputed` and is not opened. The supplementary zip is not unpacked. Short pilots stay `not_a_manuscript_result`. The older final summary and the pooled stress IQM stay `not_the_manuscript_table`.
+- `docs/claim_log_checklist.md` maps each manuscript claim to the script and the working-tree log that would carry it. A missing log is `unverified`. A file that is on disk is `present_not_recomputed` and is not opened. The supplementary zip is not unpacked. Short pilots stay `not_a_manuscript_result`. The older final summary and the pooled stress IQM stay `not_the_manuscript_table`. The learning-curve row points at `results/reproduced_figures/figure2_online_adaptation_learning_curves.png` and `plots/final/learning_curves.png`, the two files those scripts write. The stress-table row counts only `STRESS-*/summary.json`, so a `STABLE_VAL` summary in the same directory does not mark that table present.
 
 ### Not run
 
