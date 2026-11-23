@@ -76,6 +76,20 @@ def test_primary_and_reference_names_disjoint():
     assert not (primary & reference)
 
 
+def test_actuator_shift_uses_stress_severity():
+    plan = build_plan(
+        seeds=(0,),
+        controllers=("none",),
+        envs=("hopper-medium-v2",),
+        shifts=("actuator_cripple",),
+    )
+    assert len(plan) == 1
+    assert plan[0]["shift"] == "actuator_cripple"
+    assert plan[0]["severity"] == 1.0
+    assert plan[0]["shift_step"] == 5_000
+    assert "sev1" in plan[0]["output_name"]
+
+
 def test_plan_severity_and_shift_step():
     for cell in build_primary_plan() + build_reference_plan():
         assert cell["severity"] == REGIME_SEVERITY[cell["shift"]]

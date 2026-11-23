@@ -1,0 +1,23 @@
+# Direct dependencies pinned to the versions installed for the checks in
+# this revision (CPython 3.12, Linux x86_64).
+#
+# torch==2.14.0 from PyPI resolves to the cu130 build (reported as
+# 2.14.0+cu130). This environment has no GPU; torch.cuda.is_available() is
+# false and training falls back to CPU.
+#
+# Install with: pip install -r requirements.txt
+# Package metadata and minimum ranges remain in pyproject.toml.
+
+torch==2.14.0
+gymnasium[mujoco]==1.4.0
+mujoco==4.0.1
+h5py==3.16.0
+huggingface_hub==2.4.0
+minari==0.5.4
+matplotlib==3.11.2
+numpy==2.5.5
+pandas==3.1.1
+PyYAML==6.0.1
+requests==2.34.2
+scipy==1.18.1
+pytest==9.2.0

@@ -1,0 +1,64 @@
+# One-factor gate-threshold ablation around the published thresholds.
+# Published reference: rho_on=0.70, rho_off=0.85, dorm_on=0.15, dorm_off=0.08.
+# When a varied threshold would violate hysteresis, the paired threshold is
+# moved with it and recorded on the cell. Not yet run.
+name: gate_thresholds
+description: >
+  Easy threshold sweeps for CapacityGate on hopper-medium-v2 with the
+  published probe, cooldown, and shrink-and-perturb operator. Not yet run.
+status: not_yet_run
+defaults:
+  datasets: [hopper-medium-v2]
+  seeds: [0, 1, 2, 3, 4]
+  controller: capacity_gate
+  shift: none
+  severity: 0.0
+  shift_step: 5000
+  online_steps: 25000
+  warmup_updates: 25000
+  online_ratio: 0.5
+  gate_interval: 1000
+  eval_interval: 2500
+  eval_episodes: 10
+  probe_source: online_buffer
+  probe_size: 256
+  recent_window: 1024
+  gate_operator: shrink_perturb
+  rho_on: 0.70
+  rho_off: 0.85
+  dorm_on: 0.15
+  dorm_off: 0.08
+  cooldown_steps: 3000
+  active_severity: 0.1
+cells:
+  - id: published_thresholds
+    include_in_pilot: false
+    notes: Published thresholds. Not a new result.
+  - id: rho_on_0.50
+    rho_on: 0.50
+    include_in_pilot: false
+    notes: Looser rank trigger. rho_off stays 0.85.
+  - id: rho_on_0.85
+    rho_on: 0.85
+    rho_off: 0.90
+    include_in_pilot: false
+    notes: Tighter rank trigger. rho_off raised to 0.90 so rho_on <= rho_off.
+  - id: rho_on_0.95
+    rho_on: 0.95
+    rho_off: 0.97
+    include_in_pilot: true
+    notes: Very tight rank trigger. rho_off raised to 0.97.
+  - id: dorm_on_0.05
+    dorm_on: 0.05
+    dorm_off: 0.05
+    include_in_pilot: true
+    notes: Dormancy trigger at 5 percent. dorm_off lowered to 0.05 so dorm_off <= dorm_on.
+  - id: dorm_on_0.08
+    dorm_on: 0.08
+    dorm_off: 0.05
+    include_in_pilot: false
+    notes: Dormancy trigger at the published off-threshold.
+  - id: dorm_on_0.25
+    dorm_on: 0.25
+    include_in_pilot: false
+    notes: Looser dormancy trigger. dorm_off stays 0.08.

@@ -2,6 +2,13 @@
 Strictly fits <= 9 pages before bibliography with all feedback incorporated.
 """
 
+raise SystemExit(
+    "Historical manuscript generator disabled. It would overwrite "
+    "research_paper/iclr2027/iclr2027_conference.tex and still embeds the "
+    "superseded zero-functional-shift wording for ReDo. ReDo is an "
+    "approximate, low-disruption reset."
+)
+
 from pathlib import Path
 
 OUT_FILE = Path("research_paper/iclr2027/iclr2027_conference.tex")

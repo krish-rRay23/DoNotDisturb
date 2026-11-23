@@ -45,6 +45,7 @@ CONFIRM_STABLE_TOKEN = "CONFIRM-STABLE-9"
 STRESS_ENVS = ("halfcheetah-medium-v2", "walker2d-medium-v2")
 STRESS_CONTROLLERS = ("none", "fixed", "redo", "capacity_gate")
 STRESS_SEEDS = (0, 1, 2)
+CONFIRM_STRESS_EXT_TOKEN = "CONFIRM-STRESS-EXT"
 
 STABLE_ENVS = ("hopper-medium-v2",)
 STABLE_SHIFTS = ("none", "obs_noise", "reward_scale")
@@ -74,11 +75,15 @@ def stable_output_name(
     return f"STABLE_VAL-{dataset_id}-{controller}-{shift}-sev{severity:g}-seed{seed}"
 
 
-def build_stress_plan(*, device: str = "cpu") -> list[dict[str, Any]]:
+def build_stress_plan(
+    *,
+    device: str = "cpu",
+    seeds: tuple[int, ...] = STRESS_SEEDS,
+) -> list[dict[str, Any]]:
     plan = []
     for env in STRESS_ENVS:
         for ctrl in STRESS_CONTROLLERS:
-            for seed in STRESS_SEEDS:
+            for seed in seeds:
                 plan.append({
                     "dataset_id": env,
                     "controller": ctrl,
@@ -199,8 +204,23 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--outdir", type=str, default="results/stress_study")
+    parser.add_argument(
+        "--seeds",
+        type=str,
+        default="0,1,2",
+        help=(
+            "Comma-separated seeds. 0,1,2 is the published 24-cell harness. "
+            "The manuscript reports CapacityGate for seed 0 only. Any other "
+            "seed list is an extension and requires CONFIRM-STRESS-EXT."
+        ),
+    )
 
     args = parser.parse_args(argv)
+    seeds = tuple(int(part) for part in args.seeds.split(",") if part.strip())
+    if not seeds:
+        print("ERROR: --seeds must list at least one seed.", file=sys.stderr)
+        sys.exit(2)
+    extension = seeds != STRESS_SEEDS
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
@@ -216,18 +236,28 @@ def main(argv: list[str] | None = None) -> None:
             execute_plan(plan, outdir, manifest_prefix="STABLE_VAL", workers=args.workers)
         return
 
-    # Default: Stress study
-    plan = build_stress_plan(device=args.device)
-    print(f"=== 24-CELL STRESS STUDY PLAN ===")
+    # Default: Stress study. Seeds 0,1,2 reproduce the 24-cell harness.
+    # The manuscript table reports CapacityGate on seed 0 only; seeds 1 and 2
+    # for that arm, and any seed beyond 2, are not manuscript results.
+    plan = build_stress_plan(device=args.device, seeds=seeds)
+    label = "24-CELL STRESS STUDY PLAN" if not extension else f"{len(plan)}-CELL STRESS SEED EXTENSION (not yet run)"
+    print(f"=== {label} ===")
     for p in plan:
         print(f"  {p['output_name']}")
+    if extension:
+        print(
+            "These seeds are not the published 24-cell token. "
+            "Do not mix extension summaries into the manuscript table."
+        )
     if args.execute:
-        if args.confirm_matrix != CONFIRM_STRESS_TOKEN:
-            print(f"ERROR: --execute requires --confirm-matrix {CONFIRM_STRESS_TOKEN}", file=sys.stderr)
+        expected = CONFIRM_STRESS_TOKEN if not extension else CONFIRM_STRESS_EXT_TOKEN
+        if args.confirm_matrix != expected:
+            print(f"ERROR: --execute requires --confirm-matrix {expected}", file=sys.stderr)
             sys.exit(2)
-        execute_plan(plan, outdir, manifest_prefix="STRESS", workers=args.workers)
+        prefix = "STRESS" if not extension else "STRESS_EXT"
+        execute_plan(plan, outdir, manifest_prefix=prefix, workers=args.workers)
     else:
-        print("Dry run only: execution not launched.")
+        print("Dry run only: execution not launched. No scores were computed.")
 
 
 if __name__ == "__main__":
