@@ -46,3 +46,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).
 - Cal-QL, PEX, and RO2O.
 - Stress seeds the manuscript does not report.
+
+### Revision numbers still pending
+
+`docs/pending_revision_numbers.md` lists every sentence that would change if a revision reports rank in [0.9915, 1.6501], multi-seed CapacityGate stress, or a ReDo IQM of 40.37. Those figures are not in `main` or in `cursor/revision-consistency-5776`. They are not copied into the paper or the README.
