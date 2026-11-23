@@ -10,6 +10,7 @@ Commands and the source of every reported number are in `REPRODUCIBILITY.md`.
 | `run_ablations.py` | Probe source, thresholds, cooldown, and gate operator | No. Pilot token `CONFIRM-ABLATION-PILOT`; full token `CONFIRM-ABLATION-FULL`. |
 | `analyze_stress_coverage.py` | Compares local summaries to the manuscript stress table | No. |
 | `reproduce_all_tables_and_figures.py` | Rebuilds tables and figures from saved logs | No training. Needs the archived run logs. |
+| `fixture_smoke.py` | One capacity-gate cell, 4 CPU steps, synthetic offline batch | No. `--execute` needs `CONFIRM-FIXTURE-SMOKE`. The summary is a `SYNTHETIC FIXTURE`, not a result. |
 
 `configs/ablations/` holds the grids. Every planned cell is `not_yet_run` until a launcher finishes it. Pilot budgets are a few thousand environment steps and are not manuscript results.
 
