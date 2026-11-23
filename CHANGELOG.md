@@ -50,7 +50,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 ### Probe pilot
 
 - `--probe-pilot` selects four hopper seed-0 cells, one per probe-distribution row, at the 2,000-step budget. The mixed seven-cell pilot is unchanged. Both stay `not_yet_run` until executed. Unit tests cover an empty recent window, replacement on a short window, and an unknown source.
-- The threshold, cooldown, and operator grids stay one-factor: 35 threshold cells, 20 cooldown cells, and 10 operator cells, all `not_yet_run`. A unit test locks the varied field and the published fields that stay fixed.
+- The threshold, cooldown, and operator grids stay one-factor: 35 threshold cells, 20 cooldown cells, and 10 operator cells, all `not_yet_run`. A unit test locks the varied field and every other published setting, including the probe.
 
 ### Summary aggregation
 
