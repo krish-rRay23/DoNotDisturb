@@ -48,7 +48,7 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -289,9 +289,13 @@ def _evaluate(
     episodes: int,
     device,
     crippled_idx: int | None = None,
+    env_factory: Callable[..., tuple[Any, np.random.RandomState]] | None = None,
 ) -> float:
     """Deterministic policy evaluation (evaluates on target dynamics if crippled)."""
-    eval_env, _ = make_env(dataset_id, seed=seed)
+    if env_factory is None:
+        eval_env, _ = make_env(dataset_id, seed=seed)
+    else:
+        eval_env, _ = env_factory(dataset_id, seed=seed)
     try:
         agent.policy.eval()
         returns: list[float] = []
@@ -362,8 +366,16 @@ def run_final_cell(
     recent_window: int = 1024,
     probe_size: int = 256,
     gate_operator: str = "shrink_perturb",
+    fixture: bool = False,
+    offline_data: dict[str, np.ndarray] | None = None,
+    env_factory: Callable[..., tuple[Any, np.random.RandomState]] | None = None,
 ) -> dict[str, Any]:
-    """Run one factorial cell; write summary, metadata, telemetry, checkpoint."""
+    """Run one factorial cell; write summary, metadata, telemetry, checkpoint.
+
+    ``fixture=True`` marks the written summary as a synthetic wiring check.
+    It does not change the update rule. Callers that pass it must also supply
+    a synthetic offline batch. The summary is not a manuscript result.
+    """
     t_start = time.time()
     if controller not in FINAL_CONTROLLERS:
         raise ValueError(f"Unknown controller {controller!r}")
@@ -382,6 +394,8 @@ def run_final_cell(
     if severity is None:
         severity = default_severity(shift)
     severity = float(severity)
+    if fixture:
+        use_shared_offline_checkpoints = False
 
     os.environ["OMP_NUM_THREADS"] = "1"
     os.environ["MKL_NUM_THREADS"] = "1"
@@ -414,13 +428,22 @@ def run_final_cell(
 
     active_shift_step = 0 if shift == "none" else int(shift_step)
 
-    offline_data = load_offline_data(dataset_id)
+    if offline_data is None:
+        if fixture:
+            raise ValueError(
+                "fixture=True requires an in-memory offline_data batch. "
+                "This path does not read a D4RL file."
+            )
+        offline_data = load_offline_data(dataset_id)
     obs_dim = int(offline_data["observations"].shape[1])
     act_dim = int(offline_data["actions"].shape[1])
     offline_count = int(offline_data["observations"].shape[0])
 
     agent = IQLAgent(obs_dim, act_dim, device=device)
-    env, rng = make_env(dataset_id, seed=seed)
+    if env_factory is None:
+        env, rng = make_env(dataset_id, seed=seed)
+    else:
+        env, rng = env_factory(dataset_id, seed=seed)
     noise_rng = np.random.RandomState(int(seed) + NOISE_RNG_OFFSET)
     probe_rng = np.random.RandomState(int(seed) + 9999)
     online_buf = OnlineBuffer(obs_dim=obs_dim, act_dim=act_dim)
@@ -741,11 +764,15 @@ def run_final_cell(
                 c_idx = (0 if dataset_id.startswith("halfcheetah") else 2) if (shifted(online_step) and shift == "actuator_cripple") else None
                 mean_ret = _evaluate(agent, dataset_id, seed=seed + last_eval,
                                      episodes=eval_episodes, device=torch_device,
-                                     crippled_idx=c_idx)
-                r_min, r_max = _REF_RETURNS[dataset_id]
-                norm = 100.0 * (mean_ret - r_min) / (r_max - r_min)
+                                     crippled_idx=c_idx, env_factory=env_factory)
                 returns.append(mean_ret)
-                normalized.append(norm)
+                if fixture:
+                    # No D4RL reference return exists for a synthetic fixture.
+                    normalized.append(None)
+                else:
+                    r_min, r_max = _REF_RETURNS[dataset_id]
+                    norm = 100.0 * (mean_ret - r_min) / (r_max - r_min)
+                    normalized.append(norm)
                 last_eval = online_step
 
                 # Periodic atomic checkpoint for intra-cell crash recovery
@@ -879,7 +906,10 @@ def run_final_cell(
         "returns": returns,
         "normalized": normalized,
         "best_return": float(max(returns)) if returns else None,
-        "best_normalized": float(max(normalized)) if normalized else None,
+        "best_normalized": (
+            float(max(score for score in normalized if score is not None))
+            if any(score is not None for score in normalized) else None
+        ),
         "gate": gate_block,
         "m10ref": m10_block,
         "checkpoint": "checkpoint.pt",
@@ -892,6 +922,11 @@ def run_final_cell(
         "created_at": utc_timestamp(),
         "runtime_seconds": time.time() - t_start,
     }
+    if fixture:
+        summary["fixture"] = True
+        summary["banner"] = (
+            "SYNTHETIC FIXTURE. These numbers are not experimental results."
+        )
 
     _atomic_write_file(summary_file, json.dumps(summary, indent=2, sort_keys=True, default=str) + "\n")
 

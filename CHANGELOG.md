@@ -136,6 +136,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `docs/run_guide.md` lists the four confirm-gated full runs (`CONFIRM-FINAL-150`, `CONFIRM-STRESS-24`, `CONFIRM-STABLE-9`, `CONFIRM-ABLATION-FULL`) and the commands that rebuild tables and figures from their outputs. No run was launched. No manuscript number was added.
 
+### Fixture smoke
+
+- `experiments/fixture_smoke.py` is the smallest confirm-gated path: one capacity-gate cell, 4 online steps, CPU, Hopper-v5. The offline batch is built in memory and is not a D4RL file. `--execute` requires `CONFIRM-FIXTURE-SMOKE`. The summary is labeled `SYNTHETIC FIXTURE` and is not a result. No manuscript number was added.
+
 ### Dead launchers
 
 - Removed `experiments/run_overnight.py`, `experiments/benchmark_concurrency.py`, and `experiments/mechanistic_stress_test.py`. Nothing in the package or the tests imported them, and none of them required a confirm token. The launchers that remain are unchanged. Pull request #26 records the scope of each removed script, including which ones have no successor. `activation_dormancy` no longer accepts the ignored `eps` argument; weight sparsity stays on `legacy_weight_sparsity`.
