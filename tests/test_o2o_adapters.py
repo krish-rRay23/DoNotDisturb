@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import torch
 
 from adaptive_plasticity.capacity_gate import CapacityGateConfig
@@ -57,6 +59,15 @@ class MockLearner:
 
     def critic_module(self) -> torch.nn.Module:
         return self.critic
+
+
+def test_default_hook_directory_is_packaged_beside_the_module():
+    from adaptive_plasticity import o2o_adapters
+
+    directory = o2o_adapters.external_hook_dir()
+    assert directory == Path(o2o_adapters.__file__).resolve().parent / "o2o_hooks"
+    assert directory.parent.name == "adaptive_plasticity"
+    assert (directory / "cal_ql.yaml").is_file()
 
 
 def test_external_hooks_stay_not_yet_run_and_refuse_a_session():

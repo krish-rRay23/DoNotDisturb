@@ -209,8 +209,15 @@ def load_gate_hook(path: str | Path) -> GateHookConfig:
 
 
 def external_hook_dir(root: str | Path | None = None) -> Path:
-    base = Path(__file__).resolve().parents[2] if root is None else Path(root)
-    return base / "configs" / "o2o"
+    """Directory of the hook YAML files.
+
+    The default sits next to this module (``adaptive_plasticity/o2o_hooks``),
+    so a non-editable install can still load the hooks. ``root`` overrides
+    that directory directly; it is not a repository root.
+    """
+    if root is None:
+        return Path(__file__).resolve().parent / "o2o_hooks"
+    return Path(root)
 
 
 def load_external_hooks(root: str | Path | None = None) -> dict[str, GateHookConfig]:
