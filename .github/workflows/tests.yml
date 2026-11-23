@@ -50,7 +50,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Add the packages scheme-small does not ship
-        run: timeout 4m tlmgr install algorithms eso-pic multirow
+        run: |
+          tlmgr option repository https://texlive.info/tlnet-archive/2026/10/01/tlnet
+          timeout 4m tlmgr install algorithms eso-pic multirow
 
       - name: Build the manuscript
         working-directory: research_paper/iclr2027

@@ -12,6 +12,7 @@ def test_latex_job_uses_a_pinned_image_and_a_short_timeout():
     latex = text.split("\n  latex:", 1)[1]
     assert "image: ghcr.io/xu-cheng/texlive-small:20261001" in latex
     assert "timeout-minutes: 15" in latex
+    assert "tlmgr option repository https://texlive.info/tlnet-archive/2026/10/01/tlnet" in latex
     assert "timeout 4m tlmgr install algorithms eso-pic multirow" in latex
     assert "apt-get" not in latex
     assert "texlive-latex-extra" not in latex
