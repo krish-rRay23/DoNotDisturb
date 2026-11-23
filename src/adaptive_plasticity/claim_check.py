@@ -7,12 +7,24 @@ not filled in.
 
 from __future__ import annotations
 
+import re
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-__all__ = ["load_claims", "check_claims", "ClaimMismatch"]
+# A sentence period may follow a decimal. A further digit may not.
+_DECIMAL = re.compile(r"(?<![\w.])([-+]?\d+\.\d+)(?!\.?\d)")
+_STYLE = re.compile(r"<style\b.*?</style>", re.I | re.S)
+_SECTION_NUMBER = re.compile(r"Section\s+\d+\.\d+")
+
+__all__ = [
+    "load_claims",
+    "check_claims",
+    "check_surface_sync",
+    "ClaimMismatch",
+]
 
 DEFAULT_CLAIMS = Path(__file__).resolve().parents[2] / "docs" / "manuscript_claims.yaml"
 
@@ -66,6 +78,66 @@ def check_claims(root: str | Path, claims: dict[str, Any] | None = None) -> dict
         "ok": not missing and not forbidden,
         "missing": missing,
         "forbidden": forbidden,
+        "source": "transcribed_tokens_not_recomputed",
+    }
+
+
+def _decimals(text: str) -> list[str]:
+    return _DECIMAL.findall(text)
+
+
+def _decimal_values(text: str) -> set[Decimal]:
+    return {Decimal(token) for token in _decimals(text)}
+
+
+def manuscript_abstract(tex: str) -> str:
+    """The manuscript abstract, copied as written. It does not recompute a score."""
+    return tex.split(r"\begin{abstract}", 1)[1].split(r"\end{abstract}", 1)[0]
+
+
+def readme_result_section(readme: str) -> str:
+    """The README result section, stopping before the section that lists non-results."""
+    return readme.split("## Result", 1)[1].split("## What is not a result yet", 1)[0]
+
+
+def preview_prose(preview: str) -> str:
+    """Drop the stylesheet and section numbers such as ``Section 5.4``."""
+    return _SECTION_NUMBER.sub("Section", _STYLE.sub("", preview))
+
+
+def check_surface_sync(*, tex: str, readme: str, preview: str) -> dict[str, Any]:
+    """The README and the HTML preview must keep the manuscript's decimals.
+
+    Abstract decimals are copied as written, and each one must be its own
+    decimal on the public page. ``1.4`` does not match ``1.44``. A result
+    decimal on either public page must be the same value as some decimal
+    in the manuscript, so ``0.5`` still matches ``0.50``. This does not
+    recompute a score.
+    """
+    abstract = manuscript_abstract(tex)
+    prose = preview_prose(preview)
+    missing: list[dict[str, str]] = []
+    surface_tokens = {
+        "readme": set(_decimals(readme)),
+        "preview": set(_decimals(prose)),
+    }
+    for token in dict.fromkeys(_decimals(abstract)):
+        for surface, tokens in surface_tokens.items():
+            if token not in tokens:
+                missing.append({"token": token, "surface": surface})
+    manuscript_values = _decimal_values(tex)
+    extra: list[dict[str, str]] = []
+    for surface, text in (
+        ("readme", readme_result_section(readme)),
+        ("preview", prose),
+    ):
+        for token in dict.fromkeys(_decimals(text)):
+            if Decimal(token) not in manuscript_values:
+                extra.append({"token": token, "surface": surface})
+    return {
+        "ok": not missing and not extra,
+        "missing_abstract_decimals": missing,
+        "decimals_not_in_manuscript": extra,
         "source": "transcribed_tokens_not_recomputed",
     }
 
