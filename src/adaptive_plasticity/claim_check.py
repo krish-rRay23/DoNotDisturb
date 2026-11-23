@@ -91,10 +91,12 @@ def _decimal_values(text: str) -> set[Decimal]:
 
 
 def manuscript_abstract(tex: str) -> str:
+    """The manuscript abstract, copied as written. It does not recompute a score."""
     return tex.split(r"\begin{abstract}", 1)[1].split(r"\end{abstract}", 1)[0]
 
 
 def readme_result_section(readme: str) -> str:
+    """The README result section, stopping before the section that lists non-results."""
     return readme.split("## Result", 1)[1].split("## What is not a result yet", 1)[0]
 
 
