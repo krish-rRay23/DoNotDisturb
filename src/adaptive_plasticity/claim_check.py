@@ -22,6 +22,7 @@ class ClaimMismatch(RuntimeError):
 
 
 def load_claims(path: str | Path | None = None) -> dict[str, Any]:
+    """Read the transcribed token table. It does not recompute a result."""
     claims_path = Path(path) if path is not None else DEFAULT_CLAIMS
     document = yaml.safe_load(claims_path.read_text(encoding="utf-8"))
     if not isinstance(document, dict):
@@ -70,6 +71,7 @@ def check_claims(root: str | Path, claims: dict[str, Any] | None = None) -> dict
 
 
 def assert_public_claims(root: str | Path, claims: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Raise ClaimMismatch when a required token is missing or a forbidden token is present."""
     report = check_claims(root, claims)
     if report["ok"]:
         return report

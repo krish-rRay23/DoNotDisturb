@@ -9,6 +9,7 @@ The interquartile mean and the stratified bootstrap match
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +27,7 @@ __all__ = [
 ]
 
 
-def iqm(scores) -> float:
+def iqm(scores: Sequence[float] | np.ndarray) -> float:
     """Interquartile mean: mean of the middle 50% of sorted scores."""
     values = np.sort(np.asarray(scores, dtype=float))
     count = values.size
@@ -42,7 +43,7 @@ def iqm(scores) -> float:
 
 def stratified_bootstrap_ci(
     groups: list[np.ndarray],
-    stat_fn,
+    stat_fn: Callable[[np.ndarray], float],
     *,
     replicates: int = 2000,
     seed: int = 0,
@@ -166,7 +167,7 @@ def per_cell_rows(summaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def paired_effect_size(differences) -> dict[str, Any]:
+def paired_effect_size(differences: Sequence[float] | np.ndarray) -> dict[str, Any]:
     """Cohen's dz for paired differences: mean divided by the sample standard deviation.
 
     Fewer than two differences, or a zero sample standard deviation, leaves

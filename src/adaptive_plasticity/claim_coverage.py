@@ -55,6 +55,7 @@ def extract_numeric_tokens(tex: str) -> set[str]:
 
 
 def load_token_map(path: str | Path) -> dict[str, list[str]]:
+    """Read claim id to decimal tokens. The strings are transcribed, not recomputed."""
     document = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(document, dict):
         raise ValueError(f"Token map {path} must be a mapping of claim id to tokens.")
@@ -93,6 +94,7 @@ def check_numeric_claims(
 
 
 def check_repository(root: str | Path = ".") -> dict[str, Any]:
+    """Compare the manuscript decimals with the token map. It does not recompute a score."""
     base = Path(root)
     tex = (base / DEFAULT_TEX).read_text(encoding="utf-8")
     token_map = load_token_map(base / DEFAULT_MAP)

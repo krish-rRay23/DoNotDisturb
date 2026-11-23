@@ -55,6 +55,7 @@ class OnlineBuffer:
 
     def add(self, obs: np.ndarray, action: np.ndarray, reward: float,
             next_obs: np.ndarray, done: float) -> None:
+        """Store one transition, overwriting the oldest once the buffer is full."""
         i = self.idx
         self.observations[i] = obs
         self.actions[i] = action
@@ -683,6 +684,7 @@ def m5_run(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    """Parse the M5 command line and run one offline-to-online transition."""
     parser = argparse.ArgumentParser(description="M5: Offline→Online IQL transition.")
     parser.add_argument("--dataset", type=str, required=True,
                         choices=["halfcheetah-medium-v2", "hopper-medium-v2", "walker2d-medium-v2"])

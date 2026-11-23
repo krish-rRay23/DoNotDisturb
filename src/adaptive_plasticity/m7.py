@@ -109,6 +109,7 @@ class ReDoLogger:
         agent: "IQLAgent",
         redo_term: float | None = None,
     ) -> dict[str, Any] | None:
+        """Record the ReDo term when the step falls on the log interval."""
         if step % self.log_interval != 0:
             return None
         self.step = step
@@ -122,6 +123,7 @@ class ReDoLogger:
         }
 
     def snapshot(self) -> dict[str, Any]:
+        """The recorded ReDo regularizer history."""
         return {
             "redo_regularizer_history": self._redo_history,
         }

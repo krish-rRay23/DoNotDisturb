@@ -497,6 +497,7 @@ class CapacityGateController:
 
     @property
     def rank_anchor(self) -> float | None:
+        """Frozen offline effective rank, or None before the anchor is captured."""
         return self._rank_anchor
 
     @staticmethod
@@ -669,6 +670,7 @@ class CapacityGateController:
     # -- logging ---------------------------------------------------------
 
     def diagnostics(self) -> dict[str, Any]:
+        """Gate state, counts, and the threshold config. Not a score."""
         return {
             "gate_on": self.gate_on,
             "rank_anchor": self._rank_anchor,

@@ -38,6 +38,7 @@ def _cosine_distance(old: torch.Tensor, cur: torch.Tensor) -> float:
     return max(0.0, min(1.0, 1.0 - sim))
 
 def param_magnitudes(agent: IQLAgent) -> Dict[str, float]:
+    """L2 norm of each trainable policy and critic parameter tensor."""
     out: Dict[str, float] = {}
     for name, param in agent.policy.named_parameters():
         if param.requires_grad:
@@ -52,6 +53,7 @@ def param_magnitudes(agent: IQLAgent) -> Dict[str, float]:
 
 
 def critic_param_magnitudes(agent: IQLAgent) -> Dict[str, float]:
+    """L2 norm of each trainable critic and value parameter tensor."""
     out: Dict[str, float] = {}
     for name, param in agent.critic.named_parameters():
         if param.requires_grad:
@@ -63,6 +65,7 @@ def critic_param_magnitudes(agent: IQLAgent) -> Dict[str, float]:
 
 
 def policy_param_magnitudes(agent: IQLAgent) -> Dict[str, float]:
+    """L2 norm of each trainable policy parameter tensor."""
     out: Dict[str, float] = {}
     for name, param in agent.policy.named_parameters():
         if param.requires_grad:
@@ -71,6 +74,7 @@ def policy_param_magnitudes(agent: IQLAgent) -> Dict[str, float]:
 
 
 def gradient_magnitudes(agent: IQLAgent) -> Dict[str, float]:
+    """L2 norm of each existing policy and critic gradient."""
     out: Dict[str, float] = {}
     for name, param in agent.policy.named_parameters():
         if param.requires_grad and param.grad is not None:
@@ -123,6 +127,7 @@ def performance_change(
     returns_after: List[float],
     normalized_after: List[float],
 ) -> Dict[str, float]:
+    """Difference of mean return and mean normalized return, after minus before."""
     out: Dict[str, float] = {}
     if returns_before and returns_after:
         out["return_mean_delta"] = float(np.mean(np.array(returns_after, dtype=np.float64) - np.array(returns_before, dtype=np.float64)))
@@ -362,6 +367,7 @@ class DiagnosticsLogger:
         normalized_after: List[float] | None = None,
         probe_batch: torch.Tensor | np.ndarray | None = None,
     ) -> Dict[str, Any] | None:
+        """Record a diagnostic snapshot when the step falls on the log interval."""
         if step % self.log_interval != 0:
             return None
         self.step = step
@@ -421,6 +427,7 @@ def snapshot_diagnostics(
     tau: float = DORM_TAU,
     dormancy_reference: float | None = None,
 ) -> Dict[str, Any]:
+    """One diagnostic dict for the agent, optional reference agent, and optional returns."""
     out: Dict[str, Any] = {}
     out["param_magnitudes"] = param_magnitudes(agent)
     out["gradient_magnitudes"] = gradient_magnitudes(agent)
