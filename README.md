@@ -101,11 +101,11 @@ Published CapacityGate defaults, also the reference cells in the ablation config
 
 ---
 
-## Install and check
+## Quickstart
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv
+. .venv/bin/activate
 pip install -r requirements.txt
 pip install -e ".[dev]"
 # Headless MuJoCo here needs glfw. MUJOCO_GL=egl failed to import.
@@ -113,16 +113,16 @@ export MUJOCO_GL=glfw
 make check
 ```
 
-`make check` runs the unit tests (skipping cells that load gitignored datasets), the plan dry-run, a read-only manifest hash check, and the public-claim token check. It does not train and it does not download. The Makefile sets `MUJOCO_GL=glfw` when the variable is unset. An absent raw file does not fail the hash check. A present file fails it when the sha256 differs or when the manifest has no sha256 to compare.
+`make check` runs the unit tests (skipping cells that load gitignored datasets), the plan dry-run, a read-only manifest hash check, the public-claim token check, and the manuscript claim-coverage check. It does not train and it does not download. The Makefile sets `MUJOCO_GL=glfw` when the variable is unset. An absent raw file does not fail the hash check. A present file fails it when the sha256 differs or when the manifest has no sha256 to compare.
 
 `requirements.txt` pins every direct dependency with `==` (Python 3.12). `torch==2.14.0` installs a CUDA build; this environment has no GPU, and the runners accept `--device cpu`.
 
-Full MuJoCo training is intentionally not started by the commands above. Exact launch commands, dataset acquisition, and the confirm tokens are in [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
+Full MuJoCo training is intentionally not started by the commands above. The four confirm-gated GPU runs, and the commands that regenerate tables and figures after them, are in [docs/run_guide.md](docs/run_guide.md). Dataset acquisition and those confirm tokens are also in [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
 Raw D4RL files are not in git. Acquire them before any training command:
 
 ```bash
-python -m adaptive_plasticity.datasets --acquire hopper-medium-v2
+python3 -m adaptive_plasticity.datasets --acquire hopper-medium-v2
 ```
 
 Repeat for `halfcheetah-medium-v2` and `walker2d-medium-v2`.

@@ -27,6 +27,18 @@ def test_requirements_pin_every_direct_dependency():
         assert not stripped.endswith("*")
 
 
+def test_readme_quickstart_matches_make_check_and_the_run_guide():
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    section = readme.split("## Quickstart", 1)[1].split("\n## ", 1)[0]
+    assert "make check" in section
+    assert "docs/run_guide.md" in section
+    assert "claim-coverage check" in section
+    assert "REPRODUCIBILITY.md" in section
+    assert "python3 -m venv" in section
+    for forbidden in ("0.9915", "1.6501", "40.37"):
+        assert forbidden not in section
+
+
 def test_make_check_runs_tests_plans_and_hashes_with_glfw():
     makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
     assert "export MUJOCO_GL ?= glfw" in makefile
