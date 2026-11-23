@@ -4,6 +4,8 @@ All tests use tiny synthetic models; no real IQL training, no environment.
 """
 
 import math
+from pathlib import Path
+
 import numpy as np
 import pytest
 import torch
@@ -131,6 +133,13 @@ def test_performance_change_empty():
     assert math.isnan(out["return_first_delta"])
     assert math.isnan(out["normalized_mean_delta"])
     assert math.isnan(out["normalized_first_delta"])
+
+
+def test_m6_doc_uses_the_probe_signature():
+    text = (Path(__file__).resolve().parents[1] / "docs" / "M6.md").read_text(encoding="utf-8")
+    assert "activation_dormancy(policy, eps=DORM_EPS)" not in text
+    assert "activation_dormancy(policy, probe_batch=None, tau=DORM_TAU)" in text
+    assert "legacy_weight_sparsity(policy, eps=DORM_EPS)" in text
 
 
 def test_activation_dormancy_ignores_the_old_weight_threshold():
