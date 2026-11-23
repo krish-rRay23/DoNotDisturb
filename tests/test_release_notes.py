@@ -59,6 +59,27 @@ def test_changelog_names_pull_requests_27_through_33():
     assert "No manuscript number was added or replaced." in section
 
 
+def test_changelog_names_pull_requests_34_through_37():
+    text = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    section = text.split("### Merged pull requests #34–#37", 1)[1].split("### ", 1)[0]
+    for number in range(34, 38):
+        assert f"#{number}." in section
+    assert "experiments/run_overnight.py" in section
+    assert "15 reference cells" in section
+    assert "experiments/benchmark_concurrency.py" in section
+    assert "has no successor" in section
+    assert "experiments/mechanistic_stress_test.py" in section
+    assert "not the 24-cell actuator-cripple study" in section
+    assert "addressable-now" in section
+    assert "needs-data" in section
+    assert "No printed return changed." in section
+    assert "TODO: cite" in section
+    assert "No bibliography entry was added." in section
+    assert "ghcr.io/xu-cheng/texlive-small:20261001" in section
+    assert "No score is produced." in section
+    assert "No manuscript number was added or replaced." in section
+
+
 def test_requirements_stay_pinned_and_glfw_stays_documented():
     for line in (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines():
         stripped = line.strip()
