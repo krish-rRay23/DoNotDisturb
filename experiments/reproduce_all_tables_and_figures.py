@@ -33,7 +33,6 @@ RESULTS_DIR = REPO_ROOT / "results"
 FINAL_STUDY_DIR = RESULTS_DIR / "final_study"
 STRESS_STUDY_DIR = RESULTS_DIR / "stress_study"
 OUT_FIG_DIR = REPO_ROOT / "results" / "reproduced_figures"
-OUT_FIG_DIR.mkdir(parents=True, exist_ok=True)
 
 ENVS = ["halfcheetah-medium-v2", "hopper-medium-v2", "walker2d-medium-v2"]
 SHIFTS = ["none", "obs_noise", "reward_scale"]
@@ -44,7 +43,7 @@ SEEDS = [0, 1, 2, 3, 4]
 def compute_iqm(scores: np.ndarray) -> float:
     """Interquartile Mean (IQM) following Agarwal et al. (2021)."""
     if len(scores) == 0:
-        return 0.0
+        return float("nan")
     return float(stats.trim_mean(scores, proportiontocut=0.25))
 
 
@@ -189,11 +188,18 @@ def reproduce_table_2() -> pd.DataFrame:
                 ctrl_name = "Baseline (None)" if ctrl == "none" else ("Fixed (Shrink-Perturb)" if ctrl == "fixed" else "ReDo (Neuron Recycling)")
                 row[ctrl_name] = "N/A"
                 
-        # CapacityGate reporting: HalfCheetah single-cell validated (8.58); Walker2d baseline parity (7.23)
-        if env == "halfcheetah-medium-v2":
-            row["CapacityGate"] = "8.58 (Single-Cell Validated)"
+        gate_runs = glob.glob(str(STRESS_STUDY_DIR / f"STRESS-{env}-capacity_gate-actuator_cripple-sev1-seed*"))
+        gate_scores = []
+        for run_dir in sorted(gate_runs):
+            summary_path = Path(run_dir) / "summary.json"
+            if summary_path.is_file():
+                with open(summary_path, encoding="utf-8") as handle:
+                    gate_scores.append(float(json.load(handle)["normalized"][-1]))
+        if gate_scores:
+            gate_mean = float(np.mean(gate_scores))
+            row["CapacityGate"] = f"{gate_mean:.2f} (n={len(gate_scores)}, from logs)"
         else:
-            row["CapacityGate"] = "7.23 (Baseline Parity)"
+            row["CapacityGate"] = "logs absent"
             
         stress_results.append(row)
         
@@ -257,6 +263,7 @@ def plot_figure_2() -> None:
     """Figure 2: Learning curves across environments and regimes."""
     fig, axes = plt.subplots(3, 3, figsize=(12, 9), dpi=180, sharex=True)
     steps = np.linspace(2500, 25000, 10)
+    drew = False
     
     for row_idx, env in enumerate(ENVS):
         for col_idx, shift in enumerate(SHIFTS):
@@ -275,6 +282,7 @@ def plot_figure_2() -> None:
                         with open(sum_f) as f:
                             trajs.append(json.load(f)["normalized"])
                 if trajs:
+                    drew = True
                     trajs = np.array(trajs)
                     mean_t = np.mean(trajs, axis=0)
                     std_t = np.std(trajs, axis=0)
@@ -299,59 +307,25 @@ def plot_figure_2() -> None:
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     
     out_path = OUT_FIG_DIR / "figure2_online_adaptation_learning_curves.png"
+    if not drew:
+        plt.close()
+        print("Figure 2 was not written. No learning-curve logs were found.")
+        return
     plt.savefig(out_path)
     plt.close()
     print(f"[Generated] {out_path}")
 
 
 def plot_figure_3() -> None:
-    """Figure 3: Stress Study Operator Stability Asymmetry."""
-    fig, ax = plt.subplots(figsize=(7.5, 4.2), dpi=200)
-    
-    envs = ["HalfCheetah\n(Unconstrained Balance)", "Walker2d\n(Bipedal Dynamic Balance)"]
-    x = np.arange(len(envs))
-    width = 0.20
-    
-    # Means and standard deviations from stress study
-    none_vals = [6.23, 8.21]
-    none_err = [1.53, 2.38]
-    
-    fixed_vals = [15.26, -0.53]
-    fixed_err = [2.93, 0.33]
-    
-    redo_vals = [13.64, 8.03]
-    redo_err = [3.18, 1.57]
-    
-    gate_vals = [8.58, 7.23]
-    
-    rects1 = ax.bar(x - 1.5 * width, none_vals, width, yerr=none_err, capsize=4, label="Baseline (None)", color="#2b5c8f", alpha=0.85, edgecolor="black")
-    rects2 = ax.bar(x - 0.5 * width, fixed_vals, width, yerr=fixed_err, capsize=4, label="Fixed (Shrink-Perturb)", color="#d95f02", alpha=0.85, edgecolor="black")
-    rects3 = ax.bar(x + 0.5 * width, redo_vals, width, yerr=redo_err, capsize=4, label="ReDo (Neuron Recycling)", color="#7570b3", alpha=0.85, edgecolor="black")
-    rects4 = ax.bar(x + 1.5 * width, gate_vals, width, label="CapacityGate (Validated)", color="#1b9e77", alpha=0.85, edgecolor="black")
-    
-    ax.set_ylabel("Crippled Task Normalized Return", fontsize=11, fontweight="bold")
-    ax.set_title("Operator Stability Asymmetry Under Physical Non-Stationarity\n(Actuator Crippling at Step 5,000)", fontsize=11, fontweight="bold")
-    ax.set_xticks(x)
-    ax.set_xticklabels(envs, fontsize=10, fontweight="bold")
-    ax.axhline(0, color="black", linewidth=0.8)
-    ax.grid(axis="y", linestyle="--", alpha=0.4)
-    ax.legend(loc="upper right", fontsize=9)
-    
-    # Annotate key insight
-    ax.annotate("Total Collapse\n(-0.53)", xy=(1 - 0.5 * width, -0.53), xytext=(1 - 0.5 * width, -3.5),
-                arrowprops=dict(arrowstyle="->", color="#d95f02", lw=1.5),
-                fontsize=9, fontweight="bold", color="#d95f02", ha="center")
-                
-    ax.annotate("Manifold Preserved\n(8.03)", xy=(1 + 0.5 * width, 8.03), xytext=(1 + 0.5 * width, 12.0),
-                arrowprops=dict(arrowstyle="->", color="#7570b3", lw=1.5),
-                fontsize=9, fontweight="bold", color="#7570b3", ha="center")
-                
-    ax.set_ylim(-5, 20)
-    plt.tight_layout()
-    out_path = OUT_FIG_DIR / "figure3_stress_operator_asymmetry.png"
-    plt.savefig(out_path)
-    plt.close()
-    print(f"[Generated] {out_path}")
+    """Do not redraw the stress bars from manuscript constants.
+
+    Rebuild a bar chart from logs with
+    ``adaptive_plasticity.figures_from_logs.write_score_figure``.
+    """
+    print(
+        "Figure 3 was not written. Stress bars are drawn only from supplied logs, "
+        "not from manuscript constants."
+    )
 
 
 def main() -> None:
@@ -363,7 +337,8 @@ def main() -> None:
     df_t1, stats_dict = reproduce_table_1()
     df_t2 = reproduce_table_2()
     
-    print("Generating publication figures...")
+    print("Generating publication figures from inputs that are actually on disk...")
+    OUT_FIG_DIR.mkdir(parents=True, exist_ok=True)
     plot_figure_1(stats_dict)
     plot_figure_2()
     plot_figure_3()

@@ -68,7 +68,11 @@ Rebuilding the paper figures from archived logs, when the supplementary results 
 python experiments/reproduce_all_tables_and_figures.py
 ```
 
-That script reads saved logs. It does not rerun MuJoCo.
+That script reads saved logs. It does not rerun MuJoCo. It does not draw the stress bars from the numbers printed in the paper. A missing CapacityGate stress log stays `logs absent`. To plot means from whatever `summary.json` files you have, without treating the picture as a manuscript figure:
+
+```bash
+python -c "import json,sys; from adaptive_plasticity.figures_from_logs import write_score_figure; print(write_score_figure([json.load(open(p)) for p in sys.argv[1:]], 'results/figures_from_logs'))" results/ablation_pilot/*/summary.json
+```
 
 ## Datasets
 
