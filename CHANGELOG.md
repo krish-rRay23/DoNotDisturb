@@ -105,6 +105,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - Unit tests lock the dry-run matrices at 150 confirmatory runs (135 primary plus 15 reference) and 24 stress cells (2 environments, 4 controllers, seeds 0–2). A seed extension is a different length and is not that 24-cell plan. No training was launched.
 
+### Claim checklist
+
+- `docs/claim_log_checklist.md` maps each manuscript claim to the script and the working-tree log that would carry it. A missing log is `unverified`. A file that is on disk is `present_not_recomputed` and is not opened. The supplementary zip is not unpacked. Short pilots stay `not_a_manuscript_result`. The older final summary and the pooled stress IQM stay `not_the_manuscript_table`.
+
 ### Not run
 
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).
