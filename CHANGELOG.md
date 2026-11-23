@@ -36,6 +36,9 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 ### Paper wording
 
 - The abstract and contribution (2) now use the rank interval already stated in the Diagnostic Abstention section, \(\rho(t) \in [0.99, 1.03]\), and the abstract's Walker2d stress sentence uses the mean \(\pm\) standard deviation already in Table `tab:stress_results` (\(8.03 \pm 1.57\), \(-0.53 \pm 0.33\)). No new number was introduced. The unconfirmed interval [0.9915, 1.6501] and a ReDo IQM of 40.37 were not applied. The HTML preview matches those two sentences. `d < 0.08` in the preview abstract was the tex's \(d \le 0.085\).
+- The limitations section now states the locomotion scope, that \textsc{CapacityGate} does not explore, that hysteresis is relative to the existing \(7\text{--}12\%\) active-network band, and that \textsc{CapacityGate} stress is seed 0 only. ReDo is not described as an arm of the 135-cell matrix. No number was added or replaced.
+- ReDo is named as an approximate, low-disruption reset in the operator subsection, the stress table, the stress caption, and the literature matrix. Bare "CapacityGate" in that caption is \textsc{CapacityGate}.
+- Adam, Kaiming initialization, Polyak averaging, reservoir sampling, and Gym are marked `TODO: cite`. No bibliography entry was added for them. `agarwal2021rliable` is commented as a duplicate of the cited `agarwal2021deep` key.
 
 ### Reproducibility entry point
 

@@ -75,3 +75,7 @@ Put the revised PDF or `.tex`, and the response to reviewers, in the repo (or po
 ## Tables rendered from logs
 
 `experiments/render_latex_tables.py` computes cells from supplied `summary.json` files. It does not read this document and it does not read the manuscript. Do not paste `0.9915`, `1.6501`, or a ReDo IQM of `40.37` into a rendered table. A synthetic fixture used by the unit test is labeled `SYNTHETIC FIXTURE` and is not a result.
+
+## Wording pass
+
+A limitations clarification and the `TODO: cite` marks in `iclr2027_conference.tex` do not apply the three claims in this file. `0.9915`, `1.6501`, and a ReDo IQM of `40.37` stay out of the manuscript until a source file is in the repo.

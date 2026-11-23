@@ -115,14 +115,14 @@ For hidden layer $l$ with pre-activations $z_{i,j}^l$ and post-activations $h_{i
 \subsection{Uniform Replay Reservoir Probing vs. Temporal Slices}
 \label{sec:probe_sampling}
 
-Probe batch construction directly impacts telemetry. If probes use recent transitions, temporal autocorrelation in locomotion traverses narrow kinematic phases (e.g., single-leg stance), temporarily inactivating units for other phases and causing artificial dormancy spikes up to $d \approx 0.35$. \textsc{CapacityGate} enforces \emph{uniform reservoir sampling} across the full online buffer: $\mathcal{B}_{\mathrm{probe}} \sim \mathrm{Uniform}(\mathcal{D}_{\mathrm{on}}[0:t])$, reflecting the stationary distribution, keeping $d \le 0.085$ in healthy transfer, and preventing spurious triggers.
+Probe batch construction directly impacts telemetry. If probes use recent transitions, temporal autocorrelation in locomotion traverses narrow kinematic phases (e.g., single-leg stance), temporarily inactivating units for other phases and causing artificial dormancy spikes up to $d \approx 0.35$. \textsc{CapacityGate} enforces \emph{uniform reservoir sampling} [TODO: cite reservoir sampling] across the full online buffer: $\mathcal{B}_{\mathrm{probe}} \sim \mathrm{Uniform}(\mathcal{D}_{\mathrm{on}}[0:t])$, reflecting the stationary distribution, keeping $d \le 0.085$ in healthy transfer, and preventing spurious triggers.
 
 \subsection{Intervention Operators and Optimizer Moment Resets}
 \label{sec:operators}
 
-Both \textsc{CapacityGate} and periodic baselines apply parameter interventions targeting both the \textbf{twin critic ($Q_1, Q_2$)} and the \textbf{actor policy ($\pi_\phi$)} networks (with target critic Polyak weights resynced). Crucially, for all perturbed parameters, the \textbf{Adam first- and second-moment buffers ($m_t = \mathrm{exp\_avg}, v_t = \mathrm{exp\_avg\_sq}$) are explicitly zeroed out}, extinguishing historical gradient momentum and preventing stale gradient inertia from destabilizing the newly re-initialized parameters:
+Both \textsc{CapacityGate} and periodic baselines apply parameter interventions targeting both the \textbf{twin critic ($Q_1, Q_2$)} and the \textbf{actor policy ($\pi_\phi$)} networks (with target critic Polyak weights resynced [TODO: cite Polyak averaging]). Crucially, for all perturbed parameters, the \textbf{Adam [TODO: cite Adam] first- and second-moment buffers ($m_t = \mathrm{exp\_avg}, v_t = \mathrm{exp\_avg\_sq}$) are explicitly zeroed out}, extinguishing historical gradient momentum and preventing stale gradient inertia from destabilizing the newly re-initialized parameters:
 \textbf{(1) Shrink-and-Perturb (SP)} \citep{ash2020warmstarting, nikishin2022primacy}: $\theta' = (1 - \lambda)\theta + \sigma \sqrt{2/\mathrm{fan\_in}} \cdot \epsilon$ with $\epsilon \sim \mathcal{N}(0, I)$, $\lambda = 0.10, \sigma = 0.10$. SP causes an immediate non-zero functional shift: $\Delta f_\theta(x) \neq 0$.
-\textbf{(2) Neuron Recycling (ReDo)} \citep{sokar2023dormant}: Units whose relative activation score falls below $\tau_{\mathrm{redo}}$ have incoming weights reinitialized (Kaiming uniform) and outgoing weights zeroed ($W_{\mathrm{out}} = 0$). The forward map is unchanged only for units that were already silent. Under the relative threshold used here the removed contribution is small, so ReDo is an \emph{approximate, low-disruption} reset rather than an identity $f_{\theta'}(x) \equiv f_\theta(x)$. Adam moment buffers are cleared only for the recycled parameter slices.
+\textbf{(2) ReDo (approximate, low-disruption reset)} \citep{sokar2023dormant}: Units whose relative activation score falls below $\tau_{\mathrm{redo}}$ have incoming weights reinitialized (Kaiming uniform [TODO: cite Kaiming initialization]) and outgoing weights zeroed ($W_{\mathrm{out}} = 0$). The forward map is unchanged only for units that were already silent. Under the relative threshold used here the removed contribution is small, so ReDo is an \emph{approximate, low-disruption} reset rather than an identity $f_{\theta'}(x) \equiv f_\theta(x)$. Adam moment buffers are cleared only for the recycled parameter slices.
 
 \subsection{Closed-Loop Control: Hysteresis, Refractory Cooldown, and Terminal Skip}
 \label{sec:controller}
@@ -151,7 +151,7 @@ with trigger thresholds $\rho_{\mathrm{on}} = 0.70, d_{\mathrm{on}} = 0.15$ and 
         \STATE Compute relative rank ratio $\rho(t)$ and true activation dormancy $d(t)$ on $\mathcal{B}_{\mathrm{probe}}$.
         \STATE Update gate state $g_t$ via dual-threshold hysteresis.
         \IF{$g_t = 1$ \AND $(t - t_{\mathrm{last}}) \ge \Delta_{\mathrm{cool}}$}
-            \STATE Apply intervention operator (SP or ReDo) to critic $Q_\omega$ and policy $\pi_\phi$.
+            \STATE Apply Shrink-and-Perturb, or ReDo (an approximate, low-disruption reset), to critic $Q_\omega$ and policy $\pi_\phi$.
             \STATE Reset Adam moment buffers ($m_t \leftarrow 0, v_t \leftarrow 0$) for perturbed parameter slices.
             \STATE Resync Polyak target critic weights: $Q_{\mathrm{target}} \leftarrow Q_\omega$; update $t_{\mathrm{last}} \leftarrow t$.
         \ENDIF
@@ -261,7 +261,7 @@ When an agent experiences genuine physical disruption (joint actuator disabled a
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.88\textwidth]{figures/stress_operator_asymmetry.png}
-\caption{\textbf{Operator Stability Asymmetry Under Physical Non-Stationarity.} Normalized returns under joint actuator crippling at step 5,000. Bars for Baseline (None), Fixed (Shrink-and-Perturb), and ReDo (Neuron Recycling) depict mean $\pm$ std across 3 paired seeds. CapacityGate is displayed with hatched bars to denote single-cell deterministic validation (Seed 0) rather than a 3-seed mean: on Walker2d Seed 0, CapacityGate safely abstains, preserving Baseline parity ($7.23$); on HalfCheetah Seed 0, it executes spaced pulses with refractory cooldown, achieving $8.58$ vs. $7.99$ unperturbed. In balance-critical Walker2d, weight-perturbation operators (Fixed) inject non-zero functional shifts that destroy the bipedal equilibrium manifold ($-0.53 \pm 0.33$). In sharp contrast, dormant neuron recycling (ReDo) preserves balance ($8.03 \pm 1.57$, matching Baseline $8.21 \pm 2.38$) due to its approximate, low-disruption reset ($W_{\mathrm{out}} = 0$ on low-activation units). In unconstrained HalfCheetah, disrupting the offline prior aids in discovering alternate locomotion, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to outperform the passive baseline ($6.23 \pm 1.53$).}
+\caption{\textbf{Operator Stability Asymmetry Under Physical Non-Stationarity.} Normalized returns under joint actuator crippling at step 5,000. Bars for Baseline (None), Fixed (Shrink-and-Perturb), and ReDo (an approximate, low-disruption reset) depict mean $\pm$ std across 3 paired seeds. \textsc{CapacityGate} is displayed with hatched bars to denote single-cell deterministic validation (Seed 0) rather than a 3-seed mean: on Walker2d Seed 0, \textsc{CapacityGate} safely abstains, preserving Baseline parity ($7.23$); on HalfCheetah Seed 0, it executes spaced pulses with refractory cooldown, achieving $8.58$ vs. $7.99$ unperturbed. In balance-critical Walker2d, weight-perturbation operators (Fixed) inject non-zero functional shifts that destroy the bipedal equilibrium manifold ($-0.53 \pm 0.33$). In sharp contrast, dormant neuron recycling (ReDo) preserves balance ($8.03 \pm 1.57$, matching Baseline $8.21 \pm 2.38$) due to its approximate, low-disruption reset ($W_{\mathrm{out}} = 0$ on low-activation units). In unconstrained HalfCheetah, disrupting the offline prior aids in discovering alternate locomotion, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to outperform the passive baseline ($6.23 \pm 1.53$).}
 \label{fig:stress_operator_asymmetry}
 \end{figure}
 
@@ -277,13 +277,13 @@ When an agent experiences genuine physical disruption (joint actuator disabled a
 \multirow{4}{*}{\texttt{halfcheetah-medium-v2}} 
   & \texttt{none} & $7.99$ & $5.49$ & $5.21$ & $6.23 \pm 1.53$ \\
   & \texttt{fixed} (SP) & $15.29$ & $12.32$ & $18.18$ & $\mathbf{15.26} \pm \mathbf{2.93}$ \\
-  & \texttt{redo} (Neuron Recycling) & $11.40$ & $12.25$ & $17.29$ & $13.64 \pm 3.18$ \\
+  & \texttt{redo} (approximate, low-disruption reset) & $11.40$ & $12.25$ & $17.29$ & $13.64 \pm 3.18$ \\
   & \textsc{CapacityGate} & $8.58$ & --- & --- & $8.58$ (Single-Cell Validated) \\
 \midrule
 \multirow{4}{*}{\texttt{walker2d-medium-v2}} 
   & \texttt{none} & $7.23$ & $10.93$ & $6.48$ & $8.21 \pm 2.38$ \\
   & \texttt{fixed} (SP) & $-0.71$ & $-0.15$ & $-0.73$ & $-0.53 \pm 0.33$ \\
-  & \texttt{redo} (Neuron Recycling) & $8.45$ & $9.34$ & $6.29$ & $\mathbf{8.03} \pm \mathbf{1.57}$ \\
+  & \texttt{redo} (approximate, low-disruption reset) & $8.45$ & $9.34$ & $6.29$ & $\mathbf{8.03} \pm \mathbf{1.57}$ \\
   & \textsc{CapacityGate} (Seed 0 Abstain) & $7.23$ & --- & --- & $7.23$ (Baseline Parity) \\
 \bottomrule
 \end{tabular}
@@ -291,7 +291,7 @@ When an agent experiences genuine physical disruption (joint actuator disabled a
 
 \textbf{Walker2d Balance Collapse (Fixed $-0.53$ vs. ReDo $8.03$ vs. Baseline $8.21$).} Walker2d requires continuous bipedal coordination. Shrink-and-Perturb injects non-zero functional shifts ($\Delta f_\theta(x) \neq 0$), collapsing return to $-0.53 \pm 0.33$. In stark contrast, ReDo recycles low-activation neurons and zeroes their outgoing weights ($W_{\mathrm{out}} = 0$). The instantaneous policy change is an approximate, low-disruption reset, and walking dynamics remain viable ($8.03 \pm 1.57$, matching Baseline $8.21 \pm 2.38$).
 
-\textbf{HalfCheetah Gait Adaptation (Fixed $15.26$ vs. ReDo $13.64$ vs. Baseline $6.23$).} Disabling the rear actuator (joint 0) impedes forward velocity under the offline prior ($6.23 \pm 1.53$). In this forward propulsion task where falling is impossible, empirical observations indicate that disrupting the offline prior via weight perturbation or neuron recycling is consistent with discovering alternate front-joint locomotion modes, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to outperform the passive baseline.
+\textbf{HalfCheetah Gait Adaptation (Fixed $15.26$ vs. ReDo $13.64$ vs. Baseline $6.23$).} Disabling the rear actuator (joint 0) impedes forward velocity under the offline prior ($6.23 \pm 1.53$). In this forward propulsion task where falling is impossible, empirical observations indicate that disrupting the offline prior via weight perturbation or ReDo (an approximate, low-disruption reset) is consistent with discovering alternate front-joint locomotion modes, enabling Fixed ($15.26 \pm 2.93$) and ReDo ($13.64 \pm 3.18$) to outperform the passive baseline.
 
 \subsection{Controller Dynamics: Diagnostic Causality and Refractory Spacing}
 \label{sec:telemetry}
@@ -310,9 +310,15 @@ Step-by-step diagnostic telemetry under actuator crippling on \texttt{halfcheeta
 \section{Limitations}
 \label{sec:limitations}
 
-(1) \textbf{Locomotion Focus}: While D4RL represents the standard O2O continuous-control benchmark, evaluation in high-dimensional manipulation or vision-based RL warrants future exploration.
-(2) \textbf{Exploration Independence}: \textsc{CapacityGate} acts on representation capacity; when distribution shifts require discovering disjoint behaviors, coupling gating with exploration is essential.
-(3) \textbf{Hysteresis Calibration}: Deactivation thresholds must account for baseline dormancy ($7\text{--}12\%$ in active networks) to prevent latching.
+The bounds below are properties of the protocols reported in this manuscript. They do not add a measurement.
+
+(1) \textbf{Locomotion only.} The confirmatory matrix uses the three D4RL locomotion tasks named in Section~\ref{sec:setup}. High-dimensional manipulation and vision-based control are not evaluated here.
+
+(2) \textbf{Gating is not exploration.} \textsc{CapacityGate} decides whether a representation intervention fires. When a shift requires a disjoint behavior, leaving a healthy representation undisturbed does not search for that behavior. Coupling the gate to an exploration method is not a result in this paper.
+
+(3) \textbf{Hysteresis calibration.} The off-thresholds have to sit relative to the dormant fraction already present in an active network ($7\text{--}12\%$ in active networks). A deactivation threshold inside that band can latch the gate. The reported runs use the one published threshold pair in Section~\ref{sec:controller}. They are not a threshold sweep.
+
+(4) \textbf{What the stress table does and does not report.} In Table~\ref{tab:stress_results}, \textsc{CapacityGate} is seed 0 only; seeds 1 and 2 are blank. The three-seed means in that table are for \texttt{none}, \texttt{fixed}, and ReDo. ReDo there is the approximate, low-disruption reset, and ReDo is not an arm of the 135-cell primary matrix.
 
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
@@ -351,11 +357,11 @@ Table~\ref{tab:lit_comparison} provides an extended conceptual and methodologica
 \toprule
 \textbf{Method} & \textbf{Intervention Type} & \textbf{Trigger Mechanism} & \textbf{Evaluated Domain} & \textbf{Primary Objective} & \textbf{Key Vulnerability / Limitation} \\
 \midrule
-Resetting \newline \citep{nikishin2022primacy} & Complete/Penultimate Weight Reset & Open-loop \newline (Fixed $K$ steps) & Online RL (Atari, Gym) & Overcome primacy bias in tabula rasa RL & Erases learned representations; fatal for O2O transfer. \\
+Resetting \newline \citep{nikishin2022primacy} & Complete/Penultimate Weight Reset & Open-loop \newline (Fixed $K$ steps) & Online RL (Atari, Gym [TODO: cite Gym]) & Overcome primacy bias in tabula rasa RL & Erases learned representations; fatal for O2O transfer. \\
 \midrule
 Shrink-Perturb \newline \citep{ash2020warmstarting} & Weight Shrinkage + Gaussian Noise & Open-loop \newline (Fixed interval) & Continual Supervised Learning & Escape spurious local minima & Injects non-zero functional shift; destabilizes control. \\
 \midrule
-ReDo \newline \citep{sokar2023dormant} & Dormant Neuron Recycling & Open-loop \newline (Fixed interval) & Online RL (Atari) & Restore representation capacity via dead units & Evaluated only with periodic open-loop schedule. \\
+ReDo \newline \citep{sokar2023dormant} & Approximate, low-disruption reset & Open-loop \newline (Fixed interval) & Online RL (Atari) & Restore representation capacity via dead units & Evaluated only with periodic open-loop schedule. The reset is approximate under the relative threshold used here. \\
 \midrule
 DR3 \newline \citep{kumar2022dr3} & Explicit Representation Regularizer & Implicit \newline (Continuous Loss) & Offline RL (D4RL) & Prevent feature rank collapse during pretraining & Passive penalty; cannot actively intervene online. \\
 \midrule
@@ -452,8 +458,8 @@ Batch Size & $256$ \\
 IQL Temperature ($\beta$) & $3.0$ \\
 IQL Expectile ($\tau$) & $0.70$ \\
 Discount Factor ($\gamma$) & $0.99$ \\
-Target Network Polyak Factor & $0.005$ \\
-Optimizer & Adam ($\mathrm{lr} = 3 \times 10^{-4}$) \\
+Target Network Polyak Factor [TODO: cite Polyak averaging] & $0.005$ \\
+Optimizer & Adam [TODO: cite Adam] ($\mathrm{lr} = 3 \times 10^{-4}$) \\
 Optimizer Moment Reset & $m_t \leftarrow 0, v_t \leftarrow 0$ upon parameter intervention \\
 Diagnostic Probe Interval ($\Delta t$) & $1,000$ steps \\
 Probe Batch Size ($B$) & $256$ (Uniform Replay Reservoir) \\
