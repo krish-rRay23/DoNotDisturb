@@ -99,6 +99,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `docs/reviewer_risk_review.md` lists likely reviewer objections. Each item is `addressable-now` or `needs-data`. The manuscript changes are the scope sentences only: which seeds and environments each protocol uses, that the measured collapse is periodic Shrink-and-Perturb, that \(P = 0.933\) is \(P(\text{None} > \text{Fixed})\), that the 15 reference runs are outside the reported aggregate, and that the learner is IQL. No printed return changed. The needs-data items, including the unapplied revision figures, were not filled in.
 
+### Related-work gaps
+
+- The plasticity paragraph now cites `lyle2024plasticity`, which was already in the bibliography and unused. Conservative offline pretraining now cites `kumar2020cql`, also already in the bibliography. `schwarzer2024bigger` is cited with the reset line. Its bibliography title is an Atari efficiency paper, not a dormancy paper. Cal-QL, PEX, RO2O, and any dormancy criterion other than the one already cited are marked `TODO: cite`. No bibliography entry was added.
+
 ### Public claim check
 
 - `experiments/check_public_claims.py` checks that the README, the manuscript, and the HTML preview still contain the tokens transcribed in `docs/manuscript_claims.yaml`. It does not recompute them. The unverified revision figures `0.9915`, `1.6501`, and `40.37` are forbidden on those three surfaces. The HTML preview now also states the paired-\(t\) statistic and the bootstrap interval on the mean paired difference, both already in the manuscript.
