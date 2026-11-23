@@ -41,6 +41,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `.github/workflows/tests.yml` runs pytest on pull requests and on `main`. `MUJOCO_GL=glfw` under Xvfb. Tests marked `needs_offline_data` are skipped so CI does not download datasets or run the short training cells that need them.
 
+### Public claim check
+
+- `experiments/check_public_claims.py` checks that the README, the manuscript, and the HTML preview still contain the tokens transcribed in `docs/manuscript_claims.yaml`. It does not recompute them. The unverified revision figures `0.9915`, `1.6501`, and `40.37` are forbidden on those three surfaces. The HTML preview now also states the paired-\(t\) statistic and the bootstrap interval on the mean paired difference, both already in the manuscript.
+
 ### Dataset hash check
 
 - `python -m adaptive_plasticity.datasets --check-hash <id>` compares a local raw file with the sha256 in `data/manifests/<id>.json`. It does not download and it does not rewrite the manifest. Exit 1 is a mismatch. Exit 2 means the file or the recorded sha256 is absent.
