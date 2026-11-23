@@ -11,7 +11,7 @@ export MUJOCO_GL=glfw
 make check
 ```
 
-`make check` is the single entry point. It runs `pytest` without the `needs_offline_data` cells, `experiments/dry_run_plans.py --plans-only`, `experiments/check_manifests.py`, and `experiments/check_public_claims.py`. The Makefile sets `MUJOCO_GL=glfw` when that variable is unset. The hash check is read-only. A missing HDF5 file is reported as absent and does not fail `make check`; pass `--require-present` when the files are supposed to be on disk. A sha256 mismatch exits 1. Nothing in this target trains or downloads.
+`make check` is the single entry point. It runs `pytest` without the `needs_offline_data` cells, `experiments/dry_run_plans.py --plans-only`, `experiments/check_manifests.py`, and `experiments/check_public_claims.py`. The Makefile sets `MUJOCO_GL=glfw` when that variable is unset. The hash check is read-only. A missing HDF5 file is reported as absent and does not fail `make check`; pass `--require-present` when the files are supposed to be on disk. A present file exits 1 when its sha256 differs or when the manifest has no sha256. Nothing in this target trains or downloads.
 
 Every direct dependency in `requirements.txt` is pinned with `==`. No unpinned requirement line was left in that file. Minimum ranges stay in `pyproject.toml` for package metadata.
 

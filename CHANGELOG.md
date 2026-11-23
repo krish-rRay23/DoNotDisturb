@@ -39,7 +39,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 ### Reproducibility entry point
 
-- `make check` runs the unit tests, the plan dry-run, a read-only manifest hash check, and the public-claim token check. It does not train or download. `MUJOCO_GL` defaults to `glfw` because `egl` did not import in this environment. An absent raw file does not fail the hash check; a sha256 mismatch does. Every direct dependency in `requirements.txt` was already pinned with `==`; a unit test rejects an unpinned line. The unverified revision figures were not applied.
+- `make check` runs the unit tests, the plan dry-run, a read-only manifest hash check, and the public-claim token check. It does not train or download. `MUJOCO_GL` defaults to `glfw` because `egl` did not import in this environment. An absent raw file does not fail the hash check. A present file fails it when the sha256 differs or when the manifest has no sha256 to compare. Every direct dependency in `requirements.txt` was already pinned with `==`; a unit test rejects an unpinned line. The unverified revision figures were not applied.
 
 ### Continuous integration
 

@@ -72,3 +72,22 @@ def test_hash_check_is_read_only_and_distinguishes_mismatch(tmp_path):
     after = {path for path in tmp_path.rglob("*") if path.is_file()}
     assert after == set(before)
     assert manifest.read_text(encoding="utf-8") == '{"sha256": "' + sha256_of_file(target) + '"}'
+
+
+def test_present_file_without_a_sha256_is_not_treated_as_absent(tmp_path):
+    target = raw_path("halfcheetah-medium-v2", tmp_path)
+    target.write_bytes(b"present-but-unverified")
+    missing_manifest = check_manifests.summarize_hashes(tmp_path)
+    assert missing_manifest["status"] == 1
+    assert missing_manifest["unverified"] == ["halfcheetah-medium-v2"]
+    assert "halfcheetah-medium-v2" not in missing_manifest["absent"]
+    assert "halfcheetah-medium-v2: unverified" in check_manifests.format_report(missing_manifest)
+    assert "walker2d-medium-v2: absent" in check_manifests.format_report(missing_manifest)
+
+    manifest = tmp_path / "data" / "manifests" / "halfcheetah-medium-v2.json"
+    manifest.parent.mkdir(parents=True, exist_ok=True)
+    manifest.write_text('{"sha256": ""}', encoding="utf-8")
+    empty_digest = check_manifests.summarize_hashes(tmp_path)
+    assert empty_digest["status"] == 1
+    assert empty_digest["unverified"] == ["halfcheetah-medium-v2"]
+    assert manifest.read_text(encoding="utf-8") == '{"sha256": ""}'

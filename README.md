@@ -113,7 +113,7 @@ export MUJOCO_GL=glfw
 make check
 ```
 
-`make check` runs the unit tests (skipping cells that load gitignored datasets), the plan dry-run, a read-only manifest hash check, and the public-claim token check. It does not train and it does not download. The Makefile sets `MUJOCO_GL=glfw` when the variable is unset. An absent raw file does not fail the hash check; a present file with a different sha256 does.
+`make check` runs the unit tests (skipping cells that load gitignored datasets), the plan dry-run, a read-only manifest hash check, and the public-claim token check. It does not train and it does not download. The Makefile sets `MUJOCO_GL=glfw` when the variable is unset. An absent raw file does not fail the hash check. A present file fails it when the sha256 differs or when the manifest has no sha256 to compare.
 
 `requirements.txt` pins every direct dependency with `==` (Python 3.12). `torch==2.14.0` installs a CUDA build; this environment has no GPU, and the runners accept `--device cpu`.
 
