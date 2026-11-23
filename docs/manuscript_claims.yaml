@@ -1,0 +1,71 @@
+# Tokens transcribed from research_paper/iclr2027/iclr2027_conference.tex.
+# The checker only looks for these strings. It does not recompute a result.
+# Unverified revision figures are forbidden on the public surfaces. They may
+# still be named in docs/pending_revision_numbers.md as figures that are absent.
+surfaces:
+  tex: research_paper/iclr2027/iclr2027_conference.tex
+  readme: README.md
+  preview: research_paper/iclr2027/preview.html
+require:
+  - token: "38.78"
+    surfaces: [tex, readme, preview]
+  - token: "12.30"
+    surfaces: [tex, readme, preview]
+  - token: "[37.43, 40.03]"
+    surfaces: [tex, readme, preview]
+  - token: "[9.36, 15.10]"
+    surfaces: [tex, readme, preview]
+  - token: "26.03"
+    surfaces: [tex, readme, preview]
+  - token: "19.09"
+    surfaces: [tex, readme, preview]
+  - token: "18.0"
+    surfaces: [tex, readme, preview]
+  - token: "1.44"
+    surfaces: [tex, readme, preview]
+  - token: "9.15"
+    surfaces: [tex, readme, preview]
+  - token: "9.69"
+    surfaces: [tex, readme, preview]
+  - token: "20.72"
+    surfaces: [tex, readme, preview]
+  - token: "31.59"
+    surfaces: [tex, readme, preview]
+  - token: "22.27"
+    surfaces: [tex, readme, preview]
+  - token: "0.933"
+    surfaces: [tex, readme, preview]
+  - token: "[0.99, 1.03]"
+    surfaces: [tex, readme, preview]
+  - token: "0.085"
+    surfaces: [tex, readme, preview]
+  - token: "8.03"
+    surfaces: [tex, readme, preview]
+  - token: "1.57"
+    surfaces: [tex, readme, preview]
+  - token: "-0.53"
+    surfaces: [tex, readme, preview]
+  - token: "0.33"
+    surfaces: [tex, readme, preview]
+  - token: "8.58"
+    surfaces: [tex, readme, preview]
+  - token: "7.23"
+    surfaces: [tex, readme, preview]
+  - token: "68.3"
+    surfaces: [tex, readme, preview]
+forbid:
+  - token: "0.9915"
+    surfaces: [tex, readme, preview]
+    reason: Unverified revision interval. Not in the manuscript.
+  - token: "1.6501"
+    surfaces: [tex, readme, preview]
+    reason: Unverified revision interval. Not in the manuscript.
+  - token: "40.37"
+    surfaces: [tex, readme, preview]
+    reason: Unverified ReDo IQM. Not in the manuscript.
+  - token: "40.06"
+    surfaces: [tex, preview]
+    reason: Stale supplementary-zip interval. The manuscript high end is 40.03.
+  - token: "9.31"
+    surfaces: [tex, preview]
+    reason: Stale supplementary-zip interval. The manuscript low end is 9.36.
