@@ -145,3 +145,53 @@ def test_paired_comparison_uses_only_complete_unique_cells():
     assert zeros["n_ties"] == 1
     assert zeros["wilcoxon_statistic"] is None
     assert "zero" in zeros["wilcoxon_note"]
+
+
+def test_environment_alias_does_not_collapse_distinct_datasets():
+    rows = []
+    for environment, left_score, right_score in (
+        ("halfcheetah-medium-v2", 4.0, 1.0),
+        ("walker2d-medium-v2", 8.0, 2.0),
+    ):
+        rows.append(
+            {
+                "environment": environment,
+                "controller": "none",
+                "protocol": {"shift": "actuator_cripple"},
+                "seed": 0,
+                "score": left_score,
+            }
+        )
+        rows.append(
+            {
+                "environment": environment,
+                "controller": "fixed",
+                "protocol": {"shift": "actuator_cripple"},
+                "seed": 0,
+                "score": right_score,
+            }
+        )
+    rows.append({"controller": "none", "seed": 0, "score": 5.0})
+    rows.append({"controller": "fixed", "seed": 0, "score": 6.0})
+    report = paired_comparison(rows, "none", "fixed")
+    assert report["n_pairs"] == 2
+    assert {pair["dataset_id"] for pair in report["pairs"]} == {
+        "halfcheetah-medium-v2",
+        "walker2d-medium-v2",
+    }
+    assert {pair["difference"] for pair in report["pairs"]} == {3.0, 6.0}
+    incomplete = [item for item in report["unpaired"] if item["reason"] == "incomplete_identity"]
+    assert len(incomplete) == 2
+    table = per_cell_rows(
+        [
+            {"environment": "hopper-medium-v2", "controller": "none", "shift": "none", "seed": 0, "score": 1.0},
+            {"controller": "none", "seed": 1, "score": 2.0},
+            {"controller": "none", "seed": 1, "normalized": [3.0]},
+        ]
+    )
+    assert table[0]["dataset_id"] == "hopper-medium-v2"
+    assert table[0]["duplicate_identity"] is False
+    assert table[1]["dataset_id"] is None
+    assert table[2]["dataset_id"] is None
+    assert table[1]["duplicate_identity"] is False
+    assert table[2]["duplicate_identity"] is False

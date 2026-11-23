@@ -101,6 +101,21 @@ def load_summaries(indir: str | Path) -> list[dict[str, Any]]:
     return loaded
 
 
+def _cell_fields(record: dict[str, Any]) -> tuple[Any, Any, Any, Any]:
+    """Dataset, controller, shift, and seed, with the legacy aliases.
+
+    Stress summaries may store the dataset under ``environment`` and the
+    shift under ``protocol``. Those aliases are the same cell, not a new one.
+    """
+    dataset_id = record.get("dataset_id")
+    if dataset_id is None:
+        dataset_id = record.get("environment")
+    shift = record.get("shift")
+    if shift is None and isinstance(record.get("protocol"), dict):
+        shift = record["protocol"].get("shift")
+    return dataset_id, record.get("controller"), shift, record.get("seed")
+
+
 def _final_score(summary: dict[str, Any]) -> float | None:
     scores = summary.get("normalized")
     if isinstance(scores, list) and scores:
@@ -125,25 +140,25 @@ def per_cell_rows(summaries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: dict[tuple[Any, ...], int] = {}
     rows: list[dict[str, Any]] = []
     for summary in summaries:
-        identity = (
-            summary.get("dataset_id"),
-            summary.get("controller"),
-            summary.get("shift"),
-            summary.get("seed"),
-        )
-        seen[identity] = seen.get(identity, 0) + 1
+        dataset_id, controller, shift, seed = _cell_fields(summary)
+        complete = None not in (dataset_id, controller, shift, seed)
+        duplicate = False
+        if complete:
+            identity = (dataset_id, controller, shift, seed)
+            seen[identity] = seen.get(identity, 0) + 1
+            duplicate = seen[identity] > 1
         rows.append(
             {
-                "dataset_id": summary.get("dataset_id"),
-                "controller": summary.get("controller"),
-                "shift": summary.get("shift"),
-                "seed": summary.get("seed"),
+                "dataset_id": dataset_id,
+                "controller": controller,
+                "shift": shift,
+                "seed": seed,
                 "score": _final_score(summary),
                 "applied_intervention_steps": summary.get("applied_intervention_steps"),
                 "probe_source": summary.get("probe_source"),
                 "gate_operator": summary.get("gate_operator"),
                 "summary_path": summary.get("_summary_path"),
-                "duplicate_identity": seen[identity] > 1,
+                "duplicate_identity": duplicate,
                 "manuscript_status": "not_a_manuscript_number",
             }
         )
@@ -157,24 +172,40 @@ def paired_comparison(
 ) -> dict[str, Any]:
     """Paired left-minus-right scores on ``(dataset_id, shift, seed)``.
 
-    A cell is paired only when both controllers have exactly one numeric
-    score for that identity. Duplicates and missing partners stay listed
-    and are not filled in. The Wilcoxon statistic is computed from these
-    rows only. It is not a manuscript result.
+    ``environment`` is accepted as ``dataset_id``, and a shift stored only
+    on ``protocol`` is accepted as ``shift``. A cell is paired only when
+    both controllers have exactly one numeric score and every identity
+    field is present. Incomplete rows are listed one by one so two
+    different environments cannot collapse into one pair. Duplicates and
+    missing partners stay listed and are not filled in. The Wilcoxon
+    statistic is computed from these rows only. It is not a manuscript
+    result.
     """
     from scipy.stats import wilcoxon
 
     def _index(controller: str) -> tuple[dict[tuple[Any, ...], float], list[dict[str, Any]]]:
         grouped: dict[tuple[Any, ...], list[float]] = {}
+        skipped: list[dict[str, Any]] = []
         for row in rows:
-            if row.get("controller") != controller:
+            dataset_id, row_controller, shift, seed = _cell_fields(row)
+            if row_controller != controller:
                 continue
-            identity = (row.get("dataset_id"), row.get("shift"), row.get("seed"))
             if row.get("score") is None:
                 continue
+            if None in (dataset_id, shift, seed):
+                skipped.append(
+                    {
+                        "dataset_id": dataset_id,
+                        "shift": shift,
+                        "seed": seed,
+                        "controller": controller,
+                        "reason": "incomplete_identity",
+                    }
+                )
+                continue
+            identity = (dataset_id, shift, seed)
             grouped.setdefault(identity, []).append(float(row["score"]))
         unique: dict[tuple[Any, ...], float] = {}
-        skipped: list[dict[str, Any]] = []
         for identity, scores in grouped.items():
             if len(scores) == 1:
                 unique[identity] = scores[0]
@@ -266,10 +297,11 @@ def iqm_by_controller(
     """
     by_controller: dict[str, dict[tuple[Any, Any], list[float]]] = {}
     for row in rows:
-        if row.get("score") is None or row.get("controller") is None:
+        dataset_id, controller, shift, _seed = _cell_fields(row)
+        if row.get("score") is None or controller is None or dataset_id is None or shift is None:
             continue
-        strata = by_controller.setdefault(str(row["controller"]), {})
-        key = (row.get("dataset_id"), row.get("shift"))
+        strata = by_controller.setdefault(str(controller), {})
+        key = (dataset_id, shift)
         strata.setdefault(key, []).append(float(row["score"]))
     report: dict[str, dict[str, Any]] = {}
     for controller, strata in sorted(by_controller.items()):
