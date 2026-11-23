@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "experiments"))
@@ -17,6 +18,7 @@ from adaptive_plasticity.summary_stats import (
     iqm_with_ci,
     load_summaries,
     paired_comparison,
+    paired_effect_size,
     per_cell_rows,
 )
 from aggregate_summaries import write_report
@@ -195,3 +197,25 @@ def test_environment_alias_does_not_collapse_distinct_datasets():
     assert table[2]["dataset_id"] is None
     assert table[1]["duplicate_identity"] is False
     assert table[2]["duplicate_identity"] is False
+
+
+def test_paired_effect_size_uses_the_sample_standard_deviation():
+    effect = paired_effect_size([1.0, 3.0])
+    assert effect["n"] == 2
+    assert effect["cohens_dz"] == pytest.approx(2.0 / np.sqrt(2.0))
+    assert "not a manuscript" in effect["note"]
+    assert paired_effect_size([4.0])["cohens_dz"] is None
+    assert paired_effect_size([2.0, 2.0])["cohens_dz"] is None
+    report = paired_comparison(
+        [
+            {"dataset_id": "a", "shift": "none", "seed": 0, "controller": "none", "score": 1.0},
+            {"dataset_id": "a", "shift": "none", "seed": 1, "controller": "none", "score": 3.0},
+            {"dataset_id": "a", "shift": "none", "seed": 0, "controller": "fixed", "score": 0.0},
+            {"dataset_id": "a", "shift": "none", "seed": 1, "controller": "fixed", "score": 0.0},
+        ],
+        "none",
+        "fixed",
+    )
+    assert report["effect_size"]["cohens_dz"] == pytest.approx(2.0 / np.sqrt(2.0))
+    assert report["multiple_comparisons"]["adjustment"] == "none"
+    assert report["multiple_comparisons"]["n_tests_in_this_report"] == 1

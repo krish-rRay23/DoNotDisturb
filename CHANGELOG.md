@@ -63,7 +63,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 ### Summary aggregation
 
 - `experiments/aggregate_summaries.py` writes a per-cell table and a per-controller IQM with a stratified bootstrap interval from whatever `summary.json` files it is given. Empty inputs produce no IQM. The output is labeled as not a manuscript result. The IQM definition matches `experiments/final_analysis.py`.
-- `--pair left,right` adds a left-minus-right comparison on cells that have exactly one numeric score for each controller. `environment` is read as `dataset_id`, and a shift stored only on `protocol` is read as `shift`. Rows that are still missing an identity field are listed separately and are not paired with each other. Duplicate rows and missing partners are listed and are not filled in. The Wilcoxon statistic is computed from those supplied pairs only.
+- `--pair left,right` adds a left-minus-right comparison on cells that have exactly one numeric score for each controller. `environment` is read as `dataset_id`, and a shift stored only on `protocol` is read as `shift`. Rows that are still missing an identity field are listed separately and are not paired with each other. Duplicate rows and missing partners are listed and are not filled in. The Wilcoxon statistic is computed from those supplied pairs only. Cohen's dz is the mean paired difference divided by its sample standard deviation, and it is omitted when that deviation is undefined. The p-value is labeled unadjusted and is not a manuscript test.
 
 ### External learner hooks
 
