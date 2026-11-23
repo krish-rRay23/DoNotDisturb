@@ -19,6 +19,15 @@ def test_primary_dataset_ids_are_the_three_locomotion_suites():
     )
 
 
+def test_optional_registry_ids_are_the_medium_replay_files():
+    assert dry_run_plans.optional_registry_datasets() == (
+        "halfcheetah-medium-replay-v2",
+        "hopper-medium-replay-v2",
+        "walker2d-medium-replay-v2",
+    )
+    assert set(dry_run_plans.PRIMARY_DATASETS).isdisjoint(dry_run_plans.optional_registry_datasets())
+
+
 def test_launchers_dry_run_without_training():
     captured = dry_run_plans.launch_dry_runs()
     assert "Primary plan: 135 cells" in captured["primary"]

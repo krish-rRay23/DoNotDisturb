@@ -124,6 +124,19 @@ def raw_path(canonical_id: str, project_root: str | Path = ".") -> Path:
     return raw_dir(project_root) / REGISTRY[canonical_id]["filename"]
 
 
+def missing_dataset_ids(dataset_ids, project_root: str | Path = ".") -> list[str]:
+    """Return registry ids whose raw file is absent or empty.
+
+    This never downloads. An unknown id raises ``KeyError``.
+    """
+    missing: list[str] = []
+    for dataset_id in dataset_ids:
+        path = raw_path(dataset_id, project_root)
+        if not path.is_file() or path.stat().st_size <= 0:
+            missing.append(dataset_id)
+    return missing
+
+
 def manifest_path(canonical_id: str, project_root: str | Path = ".") -> Path:
     """Return the expected manifest path for a dataset."""
     return manifest_dir(project_root) / f"{canonical_id}.json"
