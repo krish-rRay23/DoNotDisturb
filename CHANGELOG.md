@@ -41,6 +41,14 @@ Aligned the public text with the manuscript in `research_paper/iclr2027/iclr2027
 - #33. The README and `preview.html` keep the manuscript decimals. An abstract decimal has to match as its own token, so `1.4` is not a copy of `1.44`. No number was added or recomputed.
 - No manuscript number was added or replaced.
 
+### Merged pull requests #34–#37
+
+- #34. Changelog index for pull requests #27–#33. The three removed launchers stay where #27 recorded them: `experiments/run_overnight.py` did not train the 15 reference cells, `experiments/benchmark_concurrency.py` has no successor, and `experiments/mechanistic_stress_test.py` is not the 24-cell actuator-cripple study.
+- #35. `docs/reviewer_risk_review.md` tags each objection `addressable-now` or `needs-data`. The manuscript edits are the scope sentences only. No printed return changed. The needs-data items, including the unapplied revision figures, were not filled in.
+- #36. Related-work gaps are marked `TODO: cite` for Cal-QL, PEX, RO2O, and dormancy criteria other than the one already cited. `lyle2024plasticity` and `kumar2020cql` were already in the bibliography. No bibliography entry was added.
+- #37. The manuscript CI job uses `ghcr.io/xu-cheng/texlive-small:20261001` and installs `algorithms`, `eso-pic`, and `multirow` from the `2026/10/01` archive. The job stops after 15 minutes. No score is produced.
+- No manuscript number was added or replaced.
+
 ### Source of numbers
 
 - No revised manuscript, response to reviewers, or `README_UPDATED.md` is in the repository. Reported figures stay the manuscript figures. They were not recomputed and no new scores were invented.
