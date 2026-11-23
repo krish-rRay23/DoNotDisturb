@@ -15,17 +15,38 @@ from adaptive_plasticity.placeholders import (
 
 def test_placeholders_are_not_in_the_ablation_plan():
     placeholders = load_placeholders()
-    assert set(placeholders) == {"halfcheetah_medium_replay", "antmaze_umaze"}
+    assert set(placeholders) == {
+        "halfcheetah_medium_replay",
+        "hopper_medium_replay",
+        "walker2d_medium_replay",
+        "halfcheetah_expert",
+        "hopper_expert",
+        "walker2d_expert",
+        "manipulation",
+        "vision",
+        "antmaze_umaze",
+    }
     planned = {cell["dataset_id"] for cell in load_all_studies()}
-    assert "halfcheetah-medium-replay-v2" not in planned
+    for document in placeholders.values():
+        if document["dataset_id"] is not None:
+            assert document["dataset_id"] not in planned
     assert "antmaze-umaze-v2" not in planned
     assert len(load_all_studies()) == 125
 
 
 def test_replay_dataset_is_registered_and_antmaze_is_not():
     placeholders = load_placeholders()
-    assert placeholders["halfcheetah_medium_replay"]["dataset_id"] in REGISTRY
-    assert placeholders["antmaze_umaze"]["dataset_id"] not in REGISTRY
+    for name in ("halfcheetah_medium_replay", "hopper_medium_replay", "walker2d_medium_replay"):
+        assert placeholders[name]["dataset_id"] in REGISTRY
+    for name in (
+        "antmaze_umaze",
+        "halfcheetah_expert",
+        "hopper_expert",
+        "walker2d_expert",
+        "manipulation",
+        "vision",
+    ):
+        assert placeholders[name]["dataset_id"] not in REGISTRY
     for document in placeholders.values():
         assert document["status"] == "not_yet_run"
         assert document["executable"] is False

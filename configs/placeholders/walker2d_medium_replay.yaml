@@ -1,0 +1,15 @@
+# Extra D4RL locomotion file that is already in the dataset registry.
+# It is not in the 135-cell primary matrix and has not been run.
+name: walker2d_medium_replay
+status: not_yet_run
+executable: false
+dataset_id: walker2d-medium-replay-v2
+environment: Walker2d-v5
+domain: locomotion
+in_primary_matrix: false
+in_ablation_plan: false
+why_not_run: >
+  The raw file can be acquired with
+  `python -m adaptive_plasticity.datasets --acquire walker2d-medium-replay-v2`.
+  The Gymnasium id is Walker2d-v5. No plan cell uses this dataset, and no
+  score exists. Do not cite it.

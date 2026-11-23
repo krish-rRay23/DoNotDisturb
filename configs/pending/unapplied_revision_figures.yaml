@@ -1,0 +1,10 @@
+# There is no experiment that is allowed to write these figures.
+name: unapplied_revision_figures
+status: not_yet_run
+executable: false
+kind: blocked
+reviewer_phrase: are not manuscript numbers
+why_not_run: >
+  The rank interval and the ReDo IQM named in docs/pending_revision_numbers.md
+  have no source file in this repository. This plan has no cells and no
+  command. Do not add a config that writes those figures.

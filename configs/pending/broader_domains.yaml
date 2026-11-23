@@ -1,0 +1,12 @@
+# Points at placeholder configs. Does not register a new dataset and does not run.
+name: broader_domains
+status: not_yet_run
+executable: false
+kind: existing
+reviewer_phrase: Medium-replay, expert, manipulation, vision, and AntMaze
+existing_plan: configs/placeholders
+existing_path: configs/placeholders
+why_not_run: >
+  Medium-replay, expert, manipulation, vision, and AntMaze placeholders
+  stay executable false. AntMaze is not in the dataset registry. Expert,
+  manipulation, and vision are not registered. No score exists.

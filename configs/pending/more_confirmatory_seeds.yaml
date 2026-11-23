@@ -1,0 +1,15 @@
+# Extra confirmatory seeds. Not part of CONFIRM-FINAL-150. Not launched.
+name: more_confirmatory_seeds
+status: not_yet_run
+executable: false
+kind: grid
+reviewer_phrase: Five confirmatory seeds is a thin sample
+why_not_run: >
+  Seeds 5, 6, and 7 on the three medium-v2 tasks, the three confirmatory
+  shifts, and the three primary controllers. This is not the 135-cell matrix
+  and it has no score. Do not cite it.
+grid:
+  datasets: [halfcheetah-medium-v2, hopper-medium-v2, walker2d-medium-v2]
+  shifts: [none, obs_noise, reward_scale]
+  controllers: [none, fixed, capacity_gate]
+  seeds: [5, 6, 7]

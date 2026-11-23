@@ -25,6 +25,25 @@ python experiments/run_ablations.py --device cuda
 
 The final plan is 135 primary cells plus 15 reference cells (150). The stress plan is 24 cells. The stable plan is 9 cells. The full ablation plan is 125 cells, and every planned cell is `not_yet_run`. The 125-cell grid is not a manuscript table.
 
+## Needs-data plans
+
+`docs/reviewer_risk_review.md` lists items that need a run or a source file. Each one has a file under `configs/pending/`. Every file is `not_yet_run` and `executable: false`. `python experiments/dry_run_plans.py --plans-only` prints them and does not train. Nothing in this section is a result.
+
+| Reviewer item | Plan | What it is |
+| --- | --- | --- |
+| More confirmatory seeds | `configs/pending/more_confirmatory_seeds.yaml` | Seeds 5–7 on the three medium-v2 tasks, three confirmatory shifts, and three primary controllers. Not `CONFIRM-FINAL-150`. |
+| Multi-seed CapacityGate stress | `configs/pending/multiseed_capacitygate_stress.yaml` | Points at `CONFIRM-STRESS-24`, which already includes CapacityGate seeds 0, 1, and 2. The manuscript reports seed 0 only. Seeds 1 and 2 are not manuscript numbers. |
+| Unapplied revision figures | `configs/pending/unapplied_revision_figures.yaml` | No cells and no command. The figures stay in `docs/pending_revision_numbers.md`. |
+| Hopper actuator crippling | `configs/pending/hopper_actuator_stress.yaml` | `hopper-medium-v2`, `actuator_cripple`, four controllers, seeds 0–2. Hopper is not in `CONFIRM-STRESS-24`. |
+| ReDo and periodic resets on the confirmatory grid | `configs/pending/primary_reset_arms.yaml` | Controllers `redo` and `redo_periodic` on the confirmatory environments, shifts, and seeds 0–4. Not the 135-cell plan. |
+| Medium-replay, expert, manipulation, vision, AntMaze | `configs/pending/broader_domains.yaml` | Placeholder files in `configs/placeholders/`. Medium-replay ids are in the dataset registry. Expert, manipulation, vision, and AntMaze are not. |
+| Cal-QL, PEX, and RO2O | `configs/pending/external_learners.yaml` | Hook files `src/adaptive_plasticity/o2o_hooks/cal_ql.yaml`, `pex.yaml`, and `ro2o.yaml`. `open_external_session` still raises. |
+| Gate-threshold sweep | `configs/pending/gate_threshold_sweep.yaml` | `configs/ablations/gate_thresholds.yaml`, already inside `CONFIRM-ABLATION-FULL`. Every cell is `not_yet_run`. |
+| Per-environment signed-rank test | `configs/pending/per_environment_signed_rank.yaml` | Analysis only. It does not emit a p-value. |
+| Primary-cell gate firing | `configs/pending/primary_gate_firing.yaml` | Analysis only. It does not read a log and does not add an intervention count. |
+
+The medium-replay placeholders are `configs/placeholders/halfcheetah_medium_replay.yaml`, `hopper_medium_replay.yaml`, and `walker2d_medium_replay.yaml`. The expert placeholders are `halfcheetah_expert.yaml`, `hopper_expert.yaml`, and `walker2d_expert.yaml`. Manipulation and vision are `manipulation.yaml` and `vision.yaml`, with no dataset id. AntMaze stays `antmaze_umaze.yaml`.
+
 ## Execute
 
 Each command trains only when `--confirm-matrix` matches that plan. Any other token refuses.

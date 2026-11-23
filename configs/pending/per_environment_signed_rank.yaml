@@ -1,0 +1,10 @@
+# Analysis plan. Does not compute a p-value.
+name: per_environment_signed_rank
+status: not_yet_run
+executable: false
+kind: analysis
+reviewer_phrase: There is no per-environment signed-rank test
+why_not_run: >
+  A signed-rank test inside each environment, on the pairs the pooled test
+  already uses, has not been computed. This file does not emit a p-value.
+  The manuscript reports only the pooled test.

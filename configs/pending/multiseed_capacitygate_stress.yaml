@@ -1,0 +1,13 @@
+# The 24-cell stress plan already includes CapacityGate seeds 0, 1, and 2.
+# The manuscript table reports seed 0 only. This file does not add a score.
+name: multiseed_capacitygate_stress
+status: not_yet_run
+executable: false
+kind: existing
+reviewer_phrase: CapacityGate under actuator crippling is seed 0 only
+existing_plan: CONFIRM-STRESS-24
+existing_path: experiments/stress_factorial.py
+why_not_run: >
+  CapacityGate seeds 1 and 2 are already cells of CONFIRM-STRESS-24.
+  Their scores are not manuscript numbers. The unapplied revision figures
+  stay in docs/pending_revision_numbers.md and are not copied here.
