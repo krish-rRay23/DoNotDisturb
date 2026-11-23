@@ -36,3 +36,28 @@ jobs:
           # The Makefile also defaults MUJOCO_GL to glfw.
           MUJOCO_GL: glfw
         run: xvfb-run -a make check
+
+  latex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-bibtex-extra texlive-science
+
+      - name: Build the manuscript
+        working-directory: research_paper/iclr2027
+        run: |
+          pdflatex -interaction=nonstopmode -halt-on-error iclr2027_conference.tex
+          bibtex iclr2027_conference
+          pdflatex -interaction=nonstopmode -halt-on-error iclr2027_conference.tex
+          pdflatex -interaction=nonstopmode -halt-on-error iclr2027_conference.tex
+          if grep -E "undefined references|Citation .* undefined|^!" iclr2027_conference.log; then
+            echo "LaTeX log still reports an unresolved reference or an error."
+            exit 1
+          fi

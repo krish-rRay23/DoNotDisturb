@@ -128,6 +128,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `make check` runs `experiments/check_claim_coverage.py`. Every decimal and every `10^{n}` power printed in the manuscript must appear under a claim id in `docs/claim_numeric_tokens.yaml`. A TeX dimension is not a claim. The check does not recompute a score. `protocol_settings` holds controller and optimizer settings, not scores.
 
+### Manuscript structure
+
+- Cross-references in `iclr2027_conference.tex` resolve, including the four subfigure labels that the captions now cite with `\subref`. Relative effective rank ($\rho$) and activation dormancy ($d$) are named before the abstract uses $\rho(t)$ and $d$. Layer width is $n_l$, so it is not the activation matrix $H$. ReDo's threshold $\tau_{\mathrm{redo}} = 0.10$ is the value already in the hyperparameter table, stated where the symbol first appears. The undefined schedule symbol $K$ is gone. The discount $\gamma$ is named in the MDP. No printed return changed. CI builds the manuscript with TeX Live and fails on an undefined reference.
+
 ### Quickstart
 
 - The README quickstart runs `make check` (tests, plan dry-run, hash check, public-claim check, and claim-coverage) and points the four confirm-gated GPU runs at `docs/run_guide.md`. No manuscript number was added.
