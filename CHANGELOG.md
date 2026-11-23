@@ -50,6 +50,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - `--probe-pilot` selects four hopper seed-0 cells, one per probe-distribution row, at the 2,000-step budget. The mixed seven-cell pilot is unchanged. Both stay `not_yet_run` until executed. Unit tests cover an empty recent window, replacement on a short window, and an unknown source.
 
+### Summary aggregation
+
+- `experiments/aggregate_summaries.py` writes a per-cell table and a per-controller IQM with a stratified bootstrap interval from whatever `summary.json` files it is given. Empty inputs produce no IQM. The output is labeled as not a manuscript result. The IQM definition matches `experiments/final_analysis.py`.
+
 ### Not run
 
 - Full MuJoCo matrices (135+15 confirmatory runs and the 24-cell stress study).

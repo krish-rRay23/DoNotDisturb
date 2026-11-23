@@ -47,6 +47,7 @@ python experiments/stress_factorial.py
 python experiments/run_ablations.py
 python experiments/run_ablations.py --smoke
 python experiments/analyze_stress_coverage.py
+python experiments/aggregate_summaries.py --indir results/ablation_pilot --outdir results/aggregate_check --replicates 200
 python -c "from adaptive_plasticity.o2o_adapters import require_external_learner; require_external_learner('cal_ql')"
 ```
 
