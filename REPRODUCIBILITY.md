@@ -79,6 +79,14 @@ That script reads saved logs. It does not rerun MuJoCo. It does not draw the str
 python -c "import json,sys; from adaptive_plasticity.figures_from_logs import write_score_figure; print(write_score_figure([json.load(open(p)) for p in sys.argv[1:]], 'results/figures_from_logs'))" results/ablation_pilot/*/summary.json
 ```
 
+LaTeX tables from the same kind of summary, still not a manuscript table:
+
+```bash
+python experiments/render_latex_tables.py --indir results/ablation_pilot --outdir results/latex_tables
+```
+
+That command computes a mean, a sample standard deviation, and an IQM from the files it finds. A cell with one score has no standard deviation. A missing seed stays blank. It does not read the manuscript and it does not fill a missing cell.
+
 ## Datasets
 
 Training needs the raw D4RL files. They are gitignored.

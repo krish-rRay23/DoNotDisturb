@@ -71,3 +71,7 @@ Do not add 40.37 beside 38.78 or 12.30. If a later source defines a ReDo IQM, it
 ## What to push
 
 Put the revised PDF or `.tex`, and the response to reviewers, in the repo (or point this file at their paths). After that, the substitutions are mechanical: each row above is replaced only by the value in that source, and this file can be deleted or marked applied.
+
+## Tables rendered from logs
+
+`experiments/render_latex_tables.py` computes cells from supplied `summary.json` files. It does not read this document and it does not read the manuscript. Do not paste `0.9915`, `1.6501`, or a ReDo IQM of `40.37` into a rendered table. A synthetic fixture used by the unit test is labeled `SYNTHETIC FIXTURE` and is not a result.
