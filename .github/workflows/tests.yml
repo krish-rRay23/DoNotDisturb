@@ -9,6 +9,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -39,16 +43,14 @@ jobs:
 
   latex:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
+    container:
+      image: ghcr.io/xu-cheng/texlive-small:20261001
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install TeX Live
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
-            texlive-fonts-recommended texlive-bibtex-extra texlive-science
+      - name: Add the packages scheme-small does not ship
+        run: timeout 4m tlmgr install algorithms eso-pic multirow
 
       - name: Build the manuscript
         working-directory: research_paper/iclr2027

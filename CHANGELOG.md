@@ -85,6 +85,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 ### Continuous integration
 
 - `.github/workflows/tests.yml` runs `make check` on pull requests and on `main`. `MUJOCO_GL=glfw` under Xvfb. Tests marked `needs_offline_data` are skipped so CI does not download datasets or run the short training cells that need them.
+- The manuscript job no longer installs TeX Live with apt. It uses the pinned image `ghcr.io/xu-cheng/texlive-small:20261001`, adds `algorithms`, `eso-pic`, and `multirow` with `tlmgr`, and stops after 15 minutes. A new push on the same ref cancels the previous run. The image pull is not cached: GitHub does not cache a job container. No score is produced.
 
 ### Public API notes
 
