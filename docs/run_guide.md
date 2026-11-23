@@ -19,7 +19,7 @@ These commands print the plans and do not train.
 ```bash
 python experiments/final_factorial.py --device cuda --outdir results/final_study
 python experiments/stress_factorial.py --device cuda --outdir results/stress_study
-python experiments/stress_factorial.py --stable-validate --device cuda --outdir results/stress_study
+python experiments/stress_factorial.py --stable-validate --device cuda --outdir results/stable_validation
 python experiments/run_ablations.py --device cuda
 ```
 
@@ -32,13 +32,13 @@ Each command trains only when `--confirm-matrix` matches that plan. Any other to
 ```bash
 python experiments/final_factorial.py --execute --confirm-matrix CONFIRM-FINAL-150 --device cuda --outdir results/final_study
 python experiments/stress_factorial.py --execute --confirm-matrix CONFIRM-STRESS-24 --device cuda --workers 6 --outdir results/stress_study
-python experiments/stress_factorial.py --stable-validate --execute --confirm-matrix CONFIRM-STABLE-9 --device cuda --workers 6 --outdir results/stress_study
+python experiments/stress_factorial.py --stable-validate --execute --confirm-matrix CONFIRM-STABLE-9 --device cuda --workers 6 --outdir results/stable_validation
 python experiments/run_ablations.py --execute --confirm-matrix CONFIRM-ABLATION-FULL --device cuda --outdir results/ablations
 ```
 
 The final launcher defaults to 9 workers. The stress launcher defaults to 6. `--workers 1` runs one cell at a time. A cell that already has `summary.json` and `checkpoint.pt` is skipped.
 
-`CONFIRM-STRESS-24` is seeds 0, 1, and 2. The manuscript stress table reports CapacityGate for seed 0 only. Seeds outside `0,1,2` need `CONFIRM-STRESS-EXT` and are not this plan. `STABLE_VAL-*` summaries share `results/stress_study` and are not the stress table. `CONFIRM-ABLATION-PILOT` and `CONFIRM-PILOT-9` are short launch checks, not these four runs.
+`CONFIRM-STRESS-24` is seeds 0, 1, and 2. The manuscript stress table reports CapacityGate for seed 0 only. Seeds outside `0,1,2` need `CONFIRM-STRESS-EXT` and are not this plan. `STABLE_VAL-*` summaries go to `results/stable_validation` and are not the stress table. `CONFIRM-ABLATION-PILOT` and `CONFIRM-PILOT-9` are short launch checks, not these four runs.
 
 ## Regenerate tables and figures from the outputs
 
@@ -53,11 +53,11 @@ python experiments/analyze_stress_coverage.py --indir results/stress_study --see
 python experiments/write_claim_checklist.py
 ```
 
-`final_analysis.py` writes `results/final_study/FINAL_analysis_summary.json`, `FINAL_paper_tables.csv`, and plots under `plots/final/`, including `learning_curves.png`. It refuses while the 150-cell study is incomplete.
+`final_analysis.py` writes `results/final_study/FINAL_analysis_summary.json`, `FINAL_paper_tables.csv`, and plots under `plots/final/`, including `learning_curves.png`. It refuses when the 135-cell primary matrix is incomplete. A missing reference cell does not trip that refusal and does not stamp PARTIAL-DATA; the primary outputs are still written. `--audit-only` lists which of the 150 cells are missing. `--allow-partial` is the switch that stamps PARTIAL-DATA.
 
 `reproduce_all_tables_and_figures.py` reads `results/final_study/FINAL_paper_tables.csv` and `results/stress_study/STRESS-*/summary.json`. It writes `results/reproduced_figures/`, including `figure2_online_adaptation_learning_curves.png`. It does not draw the stress bars from manuscript constants. Those bars come from `adaptive_plasticity.figures_from_logs.write_score_figure` on supplied summaries.
 
-`render_latex_tables.py` prints a banner that the table was computed from supplied summaries and is not a manuscript table.
+`render_latex_tables.py` reads every `summary.json` under `--indir` and prints a banner that the table was computed from supplied summaries and is not a manuscript table. The stress command above stays on `results/stress_study` because that directory has the `STRESS-*` runs. `STABLE_VAL-*` stays in `results/stable_validation`, so those nine cells are not folded into that table.
 
 `write_claim_checklist.py` rewrites `docs/claim_log_checklist.md` from which of those paths exist. A file on disk is `present_not_recomputed`. The writer does not open the file.
 

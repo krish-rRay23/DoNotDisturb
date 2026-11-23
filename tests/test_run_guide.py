@@ -32,6 +32,11 @@ def test_run_guide_names_the_four_confirm_gated_runs_and_the_regenerators():
     assert "stress_iqm.json" in text
     assert "not_yet_run" in text
     assert "STABLE_VAL" in text
+    assert "--outdir results/stable_validation" in text
+    assert "results/stress_study" in text
+    assert "refuses when the 135-cell primary matrix is incomplete" in text
+    assert "refuses while the 150-cell study is incomplete" not in text
+    assert "does not stamp PARTIAL-DATA" in text
     full = select_cells(load_all_studies(REPO_ROOT), pilot=False)
     assert f"The full ablation plan is {len(full)} cells" in text
     for token in FORBIDDEN:
