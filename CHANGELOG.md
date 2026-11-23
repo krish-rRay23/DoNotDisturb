@@ -30,6 +30,17 @@ Aligned the public text with the manuscript in `research_paper/iclr2027/iclr2027
   - `activation_dormancy` no longer takes the ignored `eps` argument. `docs/M6.md` matches the probe signature. Weight sparsity stays on `legacy_weight_sparsity`.
 - No manuscript number was added or replaced.
 
+### Merged pull requests #27–#33
+
+- #27. Changelog index for pull requests #20–#26. The details of the three removed launchers stay in that section. `experiments/run_overnight.py` did not train the 15 reference cells, `experiments/benchmark_concurrency.py` has no successor, and `experiments/mechanistic_stress_test.py` is not the 24-cell actuator-cripple study.
+- #28. Confirm-gated CPU smoke, token `CONFIRM-FIXTURE-SMOKE`. Four CPU steps on a synthetic in-memory batch. The summary has `fixture` true, `best_normalized` null, and the banner `SYNTHETIC FIXTURE`. It is not a result.
+- #29. The README quickstart runs `make check` and points the four confirm-gated GPU runs at `docs/run_guide.md`.
+- #30. `docs/blockers.md` records what is still blocked: the three unapplied revision figures, the four GPU tokens, Cal-QL, PEX, RO2O, and the AntMaze placeholder. Nothing on that page is a result.
+- #31. Manuscript symbols are named at first use, and CI builds the paper with TeX Live. No printed return changed.
+- #32. Public functions in `src/adaptive_plasticity/` have a docstring and type annotations. No behavior changed.
+- #33. The README and `preview.html` keep the manuscript decimals. An abstract decimal has to match as its own token, so `1.4` is not a copy of `1.44`. No number was added or recomputed.
+- No manuscript number was added or replaced.
+
 ### Source of numbers
 
 - No revised manuscript, response to reviewers, or `README_UPDATED.md` is in the repository. Reported figures stay the manuscript figures. They were not recomputed and no new scores were invented.
