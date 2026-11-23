@@ -129,6 +129,12 @@ python experiments/run_ablations.py --pilot --execute --confirm-matrix CONFIRM-A
 
 That command was executed once in this environment after `hopper-medium-v2` was acquired. All 7 cells exited 0. Outputs stayed in gitignored `results/ablation_pilot/`. Do not copy those normalized returns into the paper.
 
+The four-cell probe pilot (offline fixed, online buffer, recent window 1024, recent window 256; hopper-medium-v2, seed 0, same short budget) is separate from the seven-cell mixed pilot:
+
+```bash
+python experiments/run_ablations.py --probe-pilot --execute --confirm-matrix CONFIRM-ABLATION-PILOT --device cpu --outdir results/probe_pilot
+```
+
 The seven pilot cells are:
 
 | Study | Cell | What changes |

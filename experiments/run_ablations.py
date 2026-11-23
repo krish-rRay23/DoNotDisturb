@@ -10,6 +10,7 @@ Examples
 python experiments/run_ablations.py
 python experiments/run_ablations.py --smoke
 python experiments/run_ablations.py --pilot --execute --confirm-matrix CONFIRM-ABLATION-PILOT --device cpu
+python experiments/run_ablations.py --probe-pilot --execute --confirm-matrix CONFIRM-ABLATION-PILOT --device cpu
 python experiments/run_ablations.py --execute --confirm-matrix CONFIRM-ABLATION-FULL --device cpu
 """
 
@@ -30,6 +31,7 @@ from adaptive_plasticity.ablations import (
     apply_pilot_budget,
     load_all_studies,
     select_cells,
+    select_probe_pilot,
 )
 
 
@@ -127,7 +129,12 @@ def _execute(cells: list[dict], *, outdir: Path, device: str, pilot: bool) -> No
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="CapacityGate ablation plan and launcher")
     parser.add_argument("--study", default=None, help="One study name. Default: all studies.")
-    parser.add_argument("--pilot", action="store_true", help="Restrict to the short pilot cells.")
+    parser.add_argument("--pilot", action="store_true", help="Restrict to the short mixed pilot cells.")
+    parser.add_argument(
+        "--probe-pilot",
+        action="store_true",
+        help="Four hopper seed-0 cells covering every probe source, at the pilot budget.",
+    )
     parser.add_argument("--execute", action="store_true", help="Train the selected cells.")
     parser.add_argument("--confirm-matrix", default="", help="Required confirmation token for --execute.")
     parser.add_argument("--smoke", action="store_true", help="Validate configs and sample synthetic probes.")
@@ -136,16 +143,25 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--write-plan", default=None, help="Optional path for the JSON plan.")
     args = parser.parse_args(argv)
 
-    cells = select_cells(load_all_studies(REPO_ROOT), pilot=args.pilot, study=args.study)
-    if args.pilot:
-        cells = [apply_pilot_budget(cell) for cell in cells]
+    if args.pilot and args.probe_pilot:
+        print("ERROR: pass only one of --pilot and --probe-pilot.", file=sys.stderr)
+        sys.exit(2)
+    studies = load_all_studies(REPO_ROOT)
+    short_run = bool(args.pilot or args.probe_pilot)
+    if args.probe_pilot:
+        cells = select_probe_pilot(studies)
+    else:
+        cells = select_cells(studies, pilot=args.pilot, study=args.study)
+        if args.pilot:
+            cells = [apply_pilot_budget(cell) for cell in cells]
+    label = "Probe pilot" if args.probe_pilot else "Pilot" if args.pilot else "Full"
     print(
-        f"{'Pilot' if args.pilot else 'Full'} ablation plan: {len(cells)} cells. "
+        f"{label} ablation plan: {len(cells)} cells. "
         "Status of every planned cell before execution: not_yet_run."
     )
     for cell in cells:
         print(
-            f"  {ablation_output_name(cell, pilot=args.pilot)} "
+            f"  {ablation_output_name(cell, pilot=short_run)} "
             f"probe={cell['probe_source']} operator={cell['gate_operator']} "
             f"rho_on={cell['rho_on']} dorm_on={cell['dorm_on']} "
             f"cooldown={cell['cooldown_steps']} steps={cell['online_steps']}"
@@ -155,7 +171,7 @@ def main(argv: list[str] | None = None) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "status": "not_yet_run" if not args.execute else "execution_requested",
-            "pilot": bool(args.pilot),
+            "pilot": bool(short_run),
             "n_cells": len(cells),
             "cells": cells,
         }
@@ -169,14 +185,14 @@ def main(argv: list[str] | None = None) -> None:
         print("Dry run only. Pass --execute and the matching --confirm-matrix token to train.")
         return
 
-    expected = PILOT_CONFIRM_TOKEN if args.pilot else FULL_CONFIRM_TOKEN
+    expected = PILOT_CONFIRM_TOKEN if short_run else FULL_CONFIRM_TOKEN
     if args.confirm_matrix != expected:
         print(f"ERROR: --execute requires --confirm-matrix {expected}", file=sys.stderr)
         sys.exit(2)
-    outdir = Path(args.outdir or ("results/ablation_pilot" if args.pilot else "results/ablations"))
+    outdir = Path(args.outdir or ("results/ablation_pilot" if short_run else "results/ablations"))
     print(f"Executing into {outdir} on device {args.device}.")
     print("These runs are not manuscript results.")
-    _execute(cells, outdir=outdir, device=args.device, pilot=args.pilot)
+    _execute(cells, outdir=outdir, device=args.device, pilot=short_run)
 
 
 if __name__ == "__main__":
