@@ -78,6 +78,89 @@ def test_pilot_is_short_and_covers_each_new_path():
     assert PILOT_CONFIRM_TOKEN != FULL_CONFIRM_TOKEN
 
 
+PUBLISHED_FIXED = {
+    "dataset_id": "hopper-medium-v2",
+    "controller": "capacity_gate",
+    "shift": "none",
+    "severity": 0.0,
+    "shift_step": 5000,
+    "online_steps": 25000,
+    "warmup_updates": 25000,
+    "online_ratio": 0.5,
+    "gate_interval": 1000,
+    "eval_interval": 2500,
+    "eval_episodes": 10,
+    "probe_source": "online_buffer",
+    "probe_size": 256,
+    "recent_window": 1024,
+    "gate_operator": "shrink_perturb",
+    "rho_on": 0.70,
+    "rho_off": 0.85,
+    "dorm_on": 0.15,
+    "dorm_off": 0.08,
+    "cooldown_steps": 3000,
+    "active_severity": 0.1,
+    "status": "not_yet_run",
+}
+
+
+def _assert_published_except(cell: dict, varied: set[str]) -> None:
+    for key, expected in PUBLISHED_FIXED.items():
+        if key in varied:
+            continue
+        assert cell[key] == expected, f"{cell['study']}:{cell['cell_id']} seed{cell['seed']} {key}"
+
+
+def test_threshold_cooldown_and_operator_grids_stay_one_factor():
+    cells = load_all_studies()
+    by_study: dict[str, list[dict]] = {}
+    for cell in cells:
+        by_study.setdefault(cell["study"], []).append(cell)
+    assert {study: len(rows) for study, rows in by_study.items()} == {
+        "probe_distributions": 60,
+        "gate_thresholds": 35,
+        "cooldown": 20,
+        "gate_operator": 10,
+    }
+
+    thresholds = [cell for cell in by_study["gate_thresholds"] if cell["seed"] == 0]
+    assert {cell["dataset_id"] for cell in by_study["gate_thresholds"]} == {"hopper-medium-v2"}
+    by_id = {cell["cell_id"]: cell for cell in thresholds}
+    assert set(by_id) == {
+        "published_thresholds",
+        "rho_on_0.50",
+        "rho_on_0.85",
+        "rho_on_0.95",
+        "dorm_on_0.05",
+        "dorm_on_0.08",
+        "dorm_on_0.25",
+    }
+    assert (by_id["published_thresholds"]["rho_on"], by_id["published_thresholds"]["rho_off"]) == (0.70, 0.85)
+    assert (by_id["rho_on_0.50"]["rho_on"], by_id["rho_on_0.50"]["rho_off"]) == (0.50, 0.85)
+    assert (by_id["rho_on_0.85"]["rho_on"], by_id["rho_on_0.85"]["rho_off"]) == (0.85, 0.90)
+    assert (by_id["rho_on_0.95"]["rho_on"], by_id["rho_on_0.95"]["rho_off"]) == (0.95, 0.97)
+    assert (by_id["dorm_on_0.05"]["dorm_on"], by_id["dorm_on_0.05"]["dorm_off"]) == (0.05, 0.05)
+    assert (by_id["dorm_on_0.08"]["dorm_on"], by_id["dorm_on_0.08"]["dorm_off"]) == (0.08, 0.05)
+    assert (by_id["dorm_on_0.25"]["dorm_on"], by_id["dorm_on_0.25"]["dorm_off"]) == (0.25, 0.08)
+    for cell in by_study["gate_thresholds"]:
+        _assert_published_except(cell, {"rho_on", "rho_off", "dorm_on", "dorm_off"})
+        assert 0.0 <= cell["dorm_off"] <= cell["dorm_on"] <= 1.0
+        assert 0.0 < cell["rho_on"] <= cell["rho_off"]
+
+    cooldowns = [cell for cell in by_study["cooldown"] if cell["seed"] == 0]
+    assert {cell["cooldown_steps"] for cell in cooldowns} == {0, 1000, 3000, 10000}
+    for cell in by_study["cooldown"]:
+        _assert_published_except(cell, {"cooldown_steps"})
+
+    operators = [cell for cell in by_study["gate_operator"] if cell["seed"] == 0]
+    assert {cell["cell_id"]: cell["gate_operator"] for cell in operators} == {
+        "shrink_perturb": "shrink_perturb",
+        "redo": "redo",
+    }
+    for cell in by_study["gate_operator"]:
+        _assert_published_except(cell, {"gate_operator"})
+
+
 def test_probe_pilot_covers_every_source_at_the_short_budget():
     cells = select_probe_pilot(load_all_studies())
     assert len(cells) == 4
