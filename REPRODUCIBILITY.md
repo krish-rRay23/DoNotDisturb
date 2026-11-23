@@ -71,7 +71,12 @@ Training needs the raw D4RL files. They are gitignored.
 python -m adaptive_plasticity.datasets --acquire hopper-medium-v2
 python -m adaptive_plasticity.datasets --acquire halfcheetah-medium-v2
 python -m adaptive_plasticity.datasets --acquire walker2d-medium-v2
+python -m adaptive_plasticity.datasets --acquire halfcheetah-medium-replay-v2
+python -m adaptive_plasticity.datasets --acquire hopper-medium-replay-v2
+python -m adaptive_plasticity.datasets --acquire walker2d-medium-replay-v2
 ```
+
+The three `medium-v2` files are what the published runners load. The three `medium-replay-v2` files are in the registry and are not part of the 135-cell plan. `antmaze-umaze-v2` is not in the registry, so `--acquire` cannot download it.
 
 Acquisition downloads a Wayback snapshot of the official D4RL file and rewrites `data/manifests/<id>.json` even when the file was already on disk. Raw HDF5 files are gitignored. If the sha256 is unchanged, restore the tracked manifest before committing:
 
@@ -83,13 +88,15 @@ git checkout -- data/manifests/walker2d-medium-v2.json
 
 If that host is unreachable, training cannot start. MuJoCo environments are `HalfCheetah-v5`, `Hopper-v5`, and `Walker2d-v5` via Gymnasium.
 
-Confirm the launchers and the three raw files without training:
+Confirm the launchers and the raw files without training:
 
 ```bash
 python experiments/dry_run_plans.py
 ```
 
-`--plans-only` skips the file check, which is what the unit test uses when the HDF5 files are not checked out.
+A missing primary file exits 2. A missing medium-replay file is printed and does not fail that command, because the published runners do not load it. `--require-registry` also exits 2 when a medium-replay file is absent. `--plans-only` skips the file check, which is what the unit test uses when the HDF5 files are not checked out.
+
+The three medium-replay files were acquired with the commands above. Each download's byte count and sha256 matched the committed manifest (`local_bytes` and `sha256`). The acquire step rewrote those manifests, and they were restored with `git checkout` so the validated fields stayed in git. The HDF5 files stayed gitignored.
 
 `configs/placeholders/halfcheetah_medium_replay.yaml` names an extra locomotion file that is in the registry and not in the primary plan. `configs/placeholders/antmaze_umaze.yaml` names AntMaze, which is not registered and has no environment adapter. Neither is runnable:
 

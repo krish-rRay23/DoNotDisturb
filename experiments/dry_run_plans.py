@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "experiments"))
 
-from adaptive_plasticity.datasets import raw_path
+from adaptive_plasticity.datasets import missing_dataset_ids, registry
 
 PRIMARY_DATASETS: tuple[str, ...] = (
     "halfcheetah-medium-v2",
@@ -32,14 +32,26 @@ PRIMARY_DATASETS: tuple[str, ...] = (
 )
 
 
+def optional_registry_datasets() -> tuple[str, ...]:
+    """Registry ids the published runners do not load.
+
+    These are the medium-replay locomotion files. ``antmaze-umaze-v2`` is
+    not in the registry, so it cannot appear here and cannot be acquired.
+    """
+    return tuple(dataset_id for dataset_id in registry() if dataset_id not in PRIMARY_DATASETS)
+
+
 def missing_primary_datasets(root: str | Path = ".") -> list[str]:
     """Return primary dataset ids whose raw file is absent or empty."""
-    missing: list[str] = []
-    for dataset_id in PRIMARY_DATASETS:
-        path = raw_path(dataset_id, root)
-        if not path.is_file() or path.stat().st_size <= 0:
-            missing.append(dataset_id)
-    return missing
+    return missing_dataset_ids(PRIMARY_DATASETS, root)
+
+
+def acquire_command_lines(dataset_ids) -> list[str]:
+    """One ``--acquire`` invocation per id. The CLI accepts a single id."""
+    return [
+        f"python -m adaptive_plasticity.datasets --acquire {dataset_id}"
+        for dataset_id in dataset_ids
+    ]
 
 
 def _capture(fn, argv: list[str]) -> str:
@@ -89,6 +101,11 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Skip the dataset-file check. Use this when the HDF5 files are not on disk.",
     )
+    parser.add_argument(
+        "--require-registry",
+        action="store_true",
+        help="Exit 2 if any registered raw file is missing, including medium-replay.",
+    )
     args = parser.parse_args(argv)
     launch_dry_runs()
     print("Dry-run launchers exited without starting training.")
@@ -96,19 +113,34 @@ def main(argv: list[str] | None = None) -> None:
         print("Dataset check skipped (--plans-only).")
         return
     missing = missing_primary_datasets(REPO_ROOT)
+    optional = optional_registry_datasets()
+    optional_missing = missing_dataset_ids(optional, REPO_ROOT)
     for dataset_id in PRIMARY_DATASETS:
         state = "missing" if dataset_id in missing else "present"
         print(f"dataset {dataset_id}: {state}")
-    if missing:
-        joined = " ".join(missing)
+    for dataset_id in optional:
+        state = "missing" if dataset_id in optional_missing else "present"
+        print(f"dataset {dataset_id}: {state} (not required by the primary plan)")
+    print("antmaze-umaze-v2 is not in the dataset registry and is not acquired.")
+    if missing or (args.require_registry and optional_missing):
+        needed = list(missing)
+        if args.require_registry:
+            needed.extend(dataset_id for dataset_id in optional_missing if dataset_id not in needed)
+        commands = "\n".join(f"  {line}" for line in acquire_command_lines(needed))
         print(
             "Missing raw files. Acquire each one, then restore an unchanged manifest:\n"
-            f"  python -m adaptive_plasticity.datasets --acquire {joined}\n"
+            f"{commands}\n"
             "  git checkout -- data/manifests/<id>.json",
             file=sys.stderr,
         )
         sys.exit(2)
-    print("Primary raw datasets are present and gitignored. No training was started.")
+    if optional_missing:
+        print(
+            "Optional medium-replay files are absent. The published runners do not load them. "
+            "No training was started."
+        )
+        return
+    print("Registered raw datasets are present and gitignored. No training was started.")
 
 
 if __name__ == "__main__":

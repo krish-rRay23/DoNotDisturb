@@ -132,6 +132,18 @@ def test_deterministic_sampling(tmp_path):
         datasets.sample_batch(data, batch_size=1000, seed=1)
 
 
+def test_missing_dataset_ids_treats_empty_files_as_absent(tmp_path):
+    datasets.raw_path("hopper-medium-v2", tmp_path).write_bytes(b"")
+    datasets.raw_path("halfcheetah-medium-v2", tmp_path).write_bytes(b"x")
+    missing = datasets.missing_dataset_ids(
+        ("hopper-medium-v2", "halfcheetah-medium-v2", "walker2d-medium-v2"),
+        tmp_path,
+    )
+    assert missing == ["hopper-medium-v2", "walker2d-medium-v2"]
+    with pytest.raises(KeyError, match="antmaze-umaze-v2"):
+        datasets.missing_dataset_ids(("antmaze-umaze-v2",), tmp_path)
+
+
 def test_loader_refuses_to_download_and_points_to_acquire(tmp_path):
     with pytest.raises(FileNotFoundError, match="--acquire halfcheetah-medium-v2"):
         datasets.load_local_dataset("halfcheetah-medium-v2", project_root=tmp_path)
