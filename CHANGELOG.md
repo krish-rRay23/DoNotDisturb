@@ -116,6 +116,10 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 - Each `needs-data` item in `docs/reviewer_risk_review.md` has a file under `configs/pending/`. New grids cover extra confirmatory seeds, Hopper actuator crippling, and ReDo or periodic resets on the confirmatory environments. Those grids are not the 135-cell plan and not the 24-cell stress plan. Medium-replay placeholders now include Hopper and Walker2d. Expert, manipulation, and vision placeholders stay unregistered. The unapplied revision figures have no cells. No plan was executed, and no score was added.
 
+### Appendix reproducibility
+
+- The hyperparameter table now also lists network width, evaluation, the advantage cap, and the shift severities taken from `final_protocol`, `PUBLISHED_GATE`, `configs/iql.yaml`, and the `IQLAgent` defaults. The table uses the gate values passed into the run. The class defaults for the dormancy off-threshold and the cooldown are not those values. A compute subsection states that the GPU model, accelerator count, host CPU, and wall-clock time are not recorded and are unknown. No score was added.
+
 ### Public claim check
 
 - `experiments/check_public_claims.py` checks that the README, the manuscript, and the HTML preview still contain the tokens transcribed in `docs/manuscript_claims.yaml`. It does not recompute them. The unverified revision figures `0.9915`, `1.6501`, and `40.37` are forbidden on those three surfaces. The HTML preview now also states the paired-\(t\) statistic and the bootstrap interval on the mean paired difference, both already in the manuscript.

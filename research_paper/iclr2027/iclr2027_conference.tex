@@ -474,9 +474,22 @@ Terminal Step Policy & Bypass intervention at $t = 25,000$ prior to rollout \\
 Perturbation Severity ($\sigma$) & $0.10$ \\
 Perturbation Shrink Factor ($\lambda$) & $0.10$ \\
 ReDo Activation Threshold ($\tau_{\mathrm{redo}}$) & $0.10$ \\
+Hidden layers / width & $2$ layers, width $256$ \\
+Evaluation & $10$ episodes every $2,500$ steps \\
+Advantage cap & $100$ \\
+Observation-noise severity & $0.10$ \\
+Reward-scale severity & $0.50$ \\
+Actuator-cripple severity & $1.0$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+The rows are the settings passed by \texttt{run\_final\_cell} (\texttt{PUBLISHED\_GATE} for the perturbation severity, the cooldown, and the dormancy off-threshold), \texttt{final\_protocol} for the step budgets, the batch, the probe interval, and the rank and dormancy on-thresholds, \texttt{configs/iql.yaml} for the IQL optimizer, and the \texttt{IQLAgent} defaults for width, depth, and the advantage cap. \texttt{final\_protocol} still copies the \texttt{CapacityGateConfig} class defaults for the dormancy off-threshold and the cooldown. Those class defaults are not the values passed into the run, and the table uses the values that are passed in. No new score is reported.
+
+\section{Compute}
+\label{app:compute}
+
+The GPU model, the number of accelerators, the host CPU, and the wall-clock time of the 135-cell matrix, the 15 reference runs, and the stress study are not recorded in this repository. They are unknown. No compute figure is reported. \texttt{configs/iql.yaml} mentions a laptop GPU only as the reason that standalone file uses a shorter gradient budget than the CORL budget. That note is not a record of the hardware used for the tables in this paper, so the model name is not copied here.
 
 \section{Diagnostic Telemetry Trajectories Across Regimes}
 \label{app:telemetry_plots}
