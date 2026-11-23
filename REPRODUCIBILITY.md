@@ -84,7 +84,15 @@ python -m adaptive_plasticity.datasets --acquire walker2d-medium-replay-v2
 
 The three `medium-v2` files are what the published runners load. The three `medium-replay-v2` files are in the registry and are not part of the 135-cell plan. `antmaze-umaze-v2` is not in the registry, so `--acquire` cannot download it.
 
-Acquisition downloads a Wayback snapshot of the official D4RL file and rewrites `data/manifests/<id>.json` even when the file was already on disk. Raw HDF5 files are gitignored. If the sha256 is unchanged, restore the tracked manifest before committing:
+Acquisition downloads a Wayback snapshot of the official D4RL file and rewrites `data/manifests/<id>.json` even when the file was already on disk. Raw HDF5 files are gitignored. If the sha256 is unchanged, restore the tracked manifest before committing. To compare a local file with the committed sha256 without writing the manifest:
+
+```bash
+python -m adaptive_plasticity.datasets --check-hash hopper-medium-v2
+```
+
+Exit 0 means the bytes match. Exit 1 means they differ. Exit 2 means the raw file or the manifest sha256 is absent. The command does not download.
+
+Restore an unchanged manifest after `--acquire` with:
 
 ```bash
 git checkout -- data/manifests/hopper-medium-v2.json
