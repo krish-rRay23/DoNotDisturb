@@ -21,6 +21,13 @@ OUTPUT_NAME = fixture_smoke.OUTPUT_NAME
 main = fixture_smoke.main
 
 
+def test_script_bootstraps_the_source_tree_like_the_other_runners():
+    text = (REPO_ROOT / "experiments" / "fixture_smoke.py").read_text(encoding="utf-8")
+    bootstrap = 'sys.path.insert(0, str(REPO_ROOT / "src"))'
+    assert bootstrap in text
+    assert text.index(bootstrap) < text.index("from adaptive_plasticity.final_runner import")
+
+
 def test_fixture_flag_refuses_to_read_a_dataset_file(tmp_path):
     from adaptive_plasticity.final_runner import run_final_cell
 
