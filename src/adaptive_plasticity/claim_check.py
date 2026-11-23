@@ -106,16 +106,22 @@ def preview_prose(preview: str) -> str:
 def check_surface_sync(*, tex: str, readme: str, preview: str) -> dict[str, Any]:
     """The README and the HTML preview must keep the manuscript's decimals.
 
-    Abstract decimals are copied as written. A result decimal on either
-    public page must be the same value as some decimal in the manuscript,
-    so ``0.5`` still matches ``0.50``. This does not recompute a score.
+    Abstract decimals are copied as written, and each one must be its own
+    decimal on the public page. ``1.4`` does not match ``1.44``. A result
+    decimal on either public page must be the same value as some decimal
+    in the manuscript, so ``0.5`` still matches ``0.50``. This does not
+    recompute a score.
     """
     abstract = manuscript_abstract(tex)
     prose = preview_prose(preview)
     missing: list[dict[str, str]] = []
+    surface_tokens = {
+        "readme": set(_decimals(readme)),
+        "preview": set(_decimals(prose)),
+    }
     for token in dict.fromkeys(_decimals(abstract)):
-        for surface, text in (("readme", readme), ("preview", prose)):
-            if token not in text:
+        for surface, tokens in surface_tokens.items():
+            if token not in tokens:
                 missing.append({"token": token, "surface": surface})
     manuscript_values = _decimal_values(tex)
     extra: list[dict[str, str]] = []

@@ -68,6 +68,16 @@ def test_an_edited_abstract_decimal_must_reach_readme_and_preview():
     assert {"token": "38.79", "surface": "preview"} in report["missing_abstract_decimals"]
 
 
+def test_a_shortened_abstract_decimal_does_not_match_a_longer_token():
+    tex, readme, preview = _surfaces()
+    abstract, rest = tex.split(r"\end{abstract}", 1)
+    edited = abstract.replace("1.44", "1.4", 1) + r"\end{abstract}" + rest
+    report = check_surface_sync(tex=edited, readme=readme, preview=preview)
+    assert report["ok"] is False
+    assert {"token": "1.4", "surface": "readme"} in report["missing_abstract_decimals"]
+    assert {"token": "1.4", "surface": "preview"} in report["missing_abstract_decimals"]
+
+
 def test_a_readme_result_decimal_that_is_not_in_the_manuscript_fails():
     tex, readme, preview = _surfaces()
     edited = readme.replace("## Result", "## Result\n\nA fabricated IQM of 99.99.\n", 1)

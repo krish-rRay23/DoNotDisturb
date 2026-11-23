@@ -81,7 +81,7 @@ A 7-cell hopper pilot (2,000 online steps, 50 warmup updates, seed 0, CPU, `MUJO
 
 ### Public surfaces stay with the manuscript
 
-- The public-claim check now also compares decimals. Every decimal in the manuscript abstract must still appear in the README and in `preview.html`. A decimal in the README result section, or in the preview prose, must be the same value as a decimal in the manuscript (`0.5` matches `0.50`). The stale zip intervals stay outside that result section, where the README already says they are not the manuscript. No number was added or recomputed.
+- The public-claim check now also compares decimals. Every decimal in the manuscript abstract must still appear in the README and in `preview.html` as its own decimal, not as a prefix of a longer one. A decimal in the README result section, or in the preview prose, must be the same value as a decimal in the manuscript (`0.5` matches `0.50`). The stale zip intervals stay outside that result section, where the README already says they are not the manuscript. No number was added or recomputed.
 
 ### Public claim check
 
